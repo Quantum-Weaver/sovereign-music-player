@@ -27,7 +27,7 @@
           class="preset-circle"
           style="background-color: {theme.accentColor}; border: {config.presetName === key || (!config.presetName && key === 'dark') ? '3px solid ' + colors.text : 'none'};"
           onclick={() => themeStore.setPreset(key)}
-          title={key}
+          aria-label="Accent color: {colors}"
         >
           <span>{presetEmojis[key] || '🎨'}</span>
         </button>
@@ -42,6 +42,7 @@
           class="color-dot"
           style="background-color: {color}; border: {config.accentColor === color ? '3px solid ' + colors.text : 'none'};"
           onclick={() => themeStore.setAccentColor(color)}
+          aria-label="Accent color: {color}"
         ></button>
       {/each}
     </div>
