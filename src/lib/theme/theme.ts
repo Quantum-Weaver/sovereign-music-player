@@ -1,44 +1,45 @@
 import type { ThemeConfig } from '$lib/types/types';
+import { QUANTUM_COLORS, MOOD_COLORS, ENERGY_COLORS } from '$lib/cosmic';
 
 export const PRESET_THEMES: Record<string, ThemeConfig> = {
   dark: {
     mode: 'dark',
-    accentColor: '#9b59b6',
+    accentColor: QUANTUM_COLORS['quantum.purple'],
     presetName: 'Dark',
     fontSize: 'medium',
     albumArtShape: 'rounded',
   },
   warm: {
     mode: 'dark',
-    accentColor: '#e67e22',
+    accentColor: QUANTUM_COLORS['hearth.gold'],
     presetName: 'Warm',
     fontSize: 'medium',
     albumArtShape: 'rounded',
   },
   ocean: {
     mode: 'dark',
-    accentColor: '#3498db',
+    accentColor: QUANTUM_COLORS['cosmic.blue'],
     presetName: 'Ocean',
     fontSize: 'medium',
     albumArtShape: 'rounded',
   },
   forest: {
     mode: 'dark',
-    accentColor: '#2ecc71',
+    accentColor: QUANTUM_COLORS['sanctuary.green'],
     presetName: 'Forest',
     fontSize: 'medium',
     albumArtShape: 'rounded',
   },
   sunset: {
     mode: 'dark',
-    accentColor: '#e74c3c',
+    accentColor: QUANTUM_COLORS['fire.base'],
     presetName: 'Sunset',
     fontSize: 'medium',
     albumArtShape: 'rounded',
   },
   amoled: {
     mode: 'amoled',
-    accentColor: '#9b59b6',
+    accentColor: QUANTUM_COLORS['quantum.purple'],
     presetName: 'AMOLED Black',
     fontSize: 'medium',
     albumArtShape: 'rounded',
@@ -49,17 +50,17 @@ export const getThemeColors = (config: ThemeConfig) => {
   const isDark = config.mode !== 'light';
   
   return {
-    background: config.mode === 'amoled' ? '#000000' : isDark ? '#121212' : '#f5f5f5',
-    surface: config.mode === 'amoled' ? '#0a0a0a' : isDark ? '#1e1e1e' : '#ffffff',
-    surfaceLight: config.mode === 'amoled' ? '#111111' : isDark ? '#2a2a2a' : '#f0f0f0',
+    background: config.mode === 'amoled' ? '#000000' : QUANTUM_COLORS['deepSpace'],
+    surface: config.mode === 'amoled' ? '#0a0a0a' : QUANTUM_COLORS['surface'],
+    surfaceLight: config.mode === 'amoled' ? '#111111' : '#2a2a5a',
     accent: config.accentColor,
     accentPulse: config.accentColor + 'CC',
-    text: isDark ? '#e0e0e0' : '#212121',
-    textSecondary: isDark ? '#999999' : '#666666',
-    textMuted: isDark ? '#666666' : '#999999',
-    border: isDark ? '#333333' : '#e0e0e0',
-    heart: '#e74c3c',
-    success: '#2ecc71',
-    warning: '#f39c12',
+    text: QUANTUM_COLORS['starDust'],
+    textSecondary: '#999999',
+    textMuted: '#666666',
+    border: 'rgba(99, 110, 114, 0.3)',
+    heart: QUANTUM_COLORS['error'],
+    success: QUANTUM_COLORS['success'],
+    warning: QUANTUM_COLORS['warning'],
   };
 };
