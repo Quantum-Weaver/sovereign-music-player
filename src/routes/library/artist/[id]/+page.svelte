@@ -5,7 +5,7 @@
   import { getThemeColors } from '$lib/theme/theme';
   import { page } from '$app/state';
 
-  const artistName = decodeURIComponent(page.params.name || "undefined");
+  const artistName = decodeURIComponent(page.params.id || "undefined");
   const colors = $derived(getThemeColors(themeStore.config));
   const tracks = $derived(libraryStore.tracks);
   
