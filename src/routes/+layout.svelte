@@ -5,6 +5,7 @@
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import type { Snippet } from 'svelte';
+  import MiniPlayer from '$lib/components/MiniPlayer.svelte';
 
   let { children }: { children: Snippet } = $props();
   let currentRoute = $state('library');
@@ -72,8 +73,12 @@
   </nav>
 
   <main class="content" style="background-color: var(--bg);">
-    {@render children?.()}
+    {#if children}
+      {@render children()}
+    {/if}
   </main>
+
+  <MiniPlayer />
 </div>
 
 <style>
