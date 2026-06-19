@@ -70,6 +70,7 @@
           class="preset-btn"
           style="background-color: {colors.surface}; border-color: {colors.border}; color: {colors.text};"
           onclick={() => startTimer(mins)}
+          aria-label="Accent color: {colors}"
         >
           {formatTime(mins)}
         </button>
@@ -82,6 +83,7 @@
         class="toggle"
         style="background-color: {fadeOut ? colors.accent : colors.surfaceLight};"
         onclick={() => fadeOut = !fadeOut}
+        aria-label="Accent color: {colors}"
       >
         <span class="dot" class:active={fadeOut}></span>
       </button>
