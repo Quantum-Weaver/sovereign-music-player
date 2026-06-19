@@ -1,8 +1,49 @@
 <script lang="ts">
+  import { libraryStore } from '$lib/stores/library.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
 
+  let searchQuery = $state('');
+  let viewMode = $state<'artists' | 'albums' | 'genres'>('artists');
+
   const colors = $derived(getThemeColors(themeStore.config));
+  const tracks = $derived(libraryStore.tracks);
+  const isScanning = $derived(libraryStore.isScanning);
+  const scanProgress = $derived(libraryStore.scanProgress);
+
+  const artists = $derived(libraryStore.artists);
+  const albums = $derived(libraryStore.albums);
+  const genres = $derived<string[]>([...new Set(tracks.map(t => t.genre).filter((g): g is string => g !== undefined && g !== null))]);
+
+  const filteredArtists = $derived(
+    searchQuery
+      ? artists.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      : artists
+  );
+
+  const filteredAlbums = $derived(
+    searchQuery
+      ? albums.filter(a =>
+          a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          a.artist.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : albums
+  );
+
+  const filteredGenres = $derived(
+    searchQuery
+      ? genres.filter(g => g.toLowerCase().includes(searchQuery.toLowerCase()))
+      : genres
+  );
+
+  function scanLibrary() {
+    // Will wire to Rust backend in Phase 6
+    console.log('Scan requested');
+  }
+
+  function navigate(path: string) {
+    window.location.href = path;
+  }
 </script>
 
 <div class="library-page">
