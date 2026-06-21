@@ -51,7 +51,7 @@
     font-size: {config.fontSize === 'small' ? '14px' : config.fontSize === 'large' ? '18px' : '16px'};
   "
 >
-  <nav class="sidebar">
+  <nav class="sidebar overflow-hidden">
     <div class="sidebar-header">
       <span class="text-2xl drop-shadow-[0_0_8px_var(--accent)]">🎵</span>
       <span class="font-bold text-[var(--text)]">Sovereign</span>
@@ -60,7 +60,6 @@
     {#each navItems as item}
       <button
         class="nav-item {currentRoute === item.id ? 'active' : ''}"
-        style="color: {currentRoute === item.id ? 'var(--accent)' : 'var(--text-secondary)'};"
         onclick={() => handleNav(item.href)}
       >
         <span class="nav-icon drop-shadow-[0_0_6px_var(--accent)]">{item.icon}</span>
@@ -83,7 +82,6 @@
     display: flex;
     height: 100vh;
     overflow: hidden;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: var(--bg);
     color: var(--text);
   }
@@ -120,16 +118,19 @@
     transition: all 0.2s ease;
     width: 100%;
     text-align: left;
+    color: var(--text-secondary);
   }
 
   .nav-item:hover {
     background-color: rgba(108, 92, 231, 0.15);
     box-shadow: 0 0 15px rgba(108, 92, 231, 0.1);
+    color: var(--text);
   }
 
   .nav-item.active {
     background-color: rgba(108, 92, 231, 0.2);
     border-left: 3px solid var(--accent);
+    color: var(--accent);
   }
 
   .nav-icon {

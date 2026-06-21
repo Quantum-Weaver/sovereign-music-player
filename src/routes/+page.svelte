@@ -69,13 +69,13 @@
 
 <div class="library-page">
   <div class="header">
-    <h1 style="color: var(--text);">Library</h1>
+    <h1>Library</h1>
     <button class="scan-btn" style="background-color: var(--accent);" onclick={scanLibrary}>
       Scan Library
     </button>
   </div>
   <div class="placeholder" style="color: var(--text-secondary);">
-    <span style="font-size: 4rem;">🎵</span>
+    <span style="font-size: 4rem --accent-glow;">🎵</span>
     <p>Your music library will appear here</p>
   </div>
 </div>
@@ -86,17 +86,22 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    background-color: var(--bg);
   }
+
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
   }
+
   h1 {
     font-size: 1.75rem;
     font-weight: 700;
+    color: var(--text);
   }
+
   .scan-btn {
     color: white;
     border: none;
@@ -104,13 +109,22 @@
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
+    background-color: var(--accent);
+    box-shadow: var(--accent-glow);
     transition: all 0.2s ease;
-    box-shadow: 0 0 20px rgba(108, 92, 231, 0.2);
   }
+
   .scan-btn:hover {
-    box-shadow: 0 0 30px rgba(108, 92, 231, 0.4);
+    box-shadow: var(--accent-glow-hover);
     transform: translateY(-1px);
   }
+
+  .scan-btn:disabled {
+    opacity: 0.7;
+    cursor: default;
+    transform: none;
+  }
+
   .placeholder {
     flex: 1;
     display: flex;
@@ -119,5 +133,6 @@
     justify-content: center;
     gap: 1rem;
     font-size: 1.1rem;
+    color: var(--text-secondary);
   }
 </style>

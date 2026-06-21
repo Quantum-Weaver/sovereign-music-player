@@ -9,20 +9,29 @@
 </script>
 
 {#if currentTrack}
-  <div class="mini-player" style="background-color: {colors.surface}; border-top-color: {colors.border};">
+  <div
+    class="mini-player"
+    style="
+      --mini-accent: {colors.accent};
+      --mini-surface: {colors.surface};
+      --mini-text: {colors.text};
+      --mini-text-secondary: {colors.textSecondary};
+      --mini-border: {colors.border};
+    "
+  >
     <button class="mini-click" onclick={() => window.location.href = '/nowplaying'}>
-      <div class="artwork" style="background-color: {colors.accent};">
+      <div class="artwork">
         <span>💿</span>
       </div>
       <div class="info">
-        <span class="title" style="color: {colors.text};">{currentTrack.title}</span>
-        <span class="artist" style="color: {colors.textSecondary};">{currentTrack.artist}</span>
+        <span class="title">{currentTrack.title}</span>
+        <span class="artist">{currentTrack.artist}</span>
       </div>
     </button>
-    <button class="ctrl-btn" style="color: {colors.text};" onclick={(e) => { e.stopPropagation(); playerStore.togglePlay(); }}>
+    <button class="ctrl-btn" onclick={(e) => { e.stopPropagation(); playerStore.togglePlay(); }}>
       <span>{isPlaying ? '⏸' : '▶️'}</span>
     </button>
-    <button class="ctrl-btn" style="color: {colors.text};" onclick={(e) => { e.stopPropagation(); playerStore.next(); }}>
+    <button class="ctrl-btn" onclick={(e) => { e.stopPropagation(); playerStore.next(); }}>
       <span>⏭</span>
     </button>
   </div>
@@ -33,10 +42,12 @@
     display: flex;
     align-items: center;
     padding: 0.5rem 0.75rem;
-    border-top: 1px solid;
+    border-top: 1px solid var(--mini-border);
     height: 60px;
     gap: 0.5rem;
+    background-color: var(--mini-surface);
   }
+
   .mini-click {
     display: flex;
     align-items: center;
@@ -51,6 +62,7 @@
     padding: 0;
     overflow: hidden;
   }
+
   .artwork {
     width: 40px;
     height: 40px;
@@ -60,11 +72,14 @@
     justify-content: center;
     font-size: 1rem;
     flex-shrink: 0;
+    background-color: var(--mini-accent);
   }
+
   .info {
     flex: 1;
     overflow: hidden;
   }
+
   .title {
     font-size: 0.85rem;
     font-weight: 600;
@@ -72,14 +87,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
     display: block;
+    color: var(--mini-text);
   }
+
   .artist {
     font-size: 0.75rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     display: block;
+    color: var(--mini-text-secondary);
   }
+
   .ctrl-btn {
     background: none;
     border: none;
@@ -87,7 +106,9 @@
     font-size: 1.3rem;
     padding: 0.25rem 0.5rem;
     transition: transform 0.1s;
+    color: var(--mini-text);
   }
+
   .ctrl-btn:hover {
     transform: scale(1.15);
   }
