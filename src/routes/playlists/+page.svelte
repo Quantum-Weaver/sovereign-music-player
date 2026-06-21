@@ -25,57 +25,47 @@
   }
 </script>
 
-<div class="playlists-page" style="background-color: {colors.background}; color: {colors.text};">
+<div class="playlists-page" style="--accent: {colors.accent}; --surface: {colors.surface}; --surface-light: {colors.surfaceLight};">
   <div class="header">
     <h2>Playlists</h2>
-    <button class="add-btn" style="background-color: {colors.accent};" onclick={() => showCreate = !showCreate}>
-      + New
-    </button>
+    <button class="add-btn" onclick={() => showCreate = !showCreate}>+ New</button>
   </div>
 
   {#if showCreate}
-    <div class="create-row" style="background-color: {colors.surface};">
+    <div class="create-row">
       <input
         type="text"
         class="create-input"
-        style="background-color: {colors.surfaceLight}; color: {colors.text};"
         placeholder="Playlist name..."
         bind:value={newName}
         onkeydown={(e) => e.key === 'Enter' && handleCreate()}
       />
-      <button class="create-btn" style="background-color: {colors.success};" onclick={handleCreate}>
-        Create
-      </button>
+      <button class="create-btn" onclick={handleCreate}>Create</button>
     </div>
   {/if}
 
   {#if playlists.length === 0 && !showCreate}
     <div class="empty-state">
-      <span style="font-size: 3rem;">📋</span>
-      <p style="color: {colors.textSecondary};">No playlists yet</p>
+      <span class="text-5xl drop-shadow-[0_0_8px_var(--accent)]">📋</span>
+      <p class="text-secondary">No playlists yet</p>
     </div>
   {:else}
     <div class="playlist-list">
       {#each playlists as playlist (playlist.id)}
-        <div class="playlist-item" style="border-bottom-color: {colors.border};">
+        <div class="playlist-item">
           <button class="playlist-click" onclick={() => window.location.href = `/playlists/${playlist.id}`}>
-            <div class="playlist-icon" style="background-color: {colors.accent};">
+            <div class="playlist-icon">
               <span>🎵</span>
             </div>
             <div class="playlist-info">
-              <span class="playlist-name" style="color: {colors.text};">{playlist.name}</span>
-              <span class="playlist-meta" style="color: {colors.textSecondary};">
+              <span class="playlist-name">{playlist.name}</span>
+              <span class="playlist-meta">
                 {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''}
               </span>
             </div>
-            <span class="chevron" style="color: {colors.textMuted};">›</span>
+            <span class="chevron">›</span>
           </button>
-          <button
-            class="delete-btn"
-            onclick={() => handleDelete(playlist.id, playlist.name)}
-          >
-            ✕
-          </button>
+          <button class="delete-btn" onclick={() => handleDelete(playlist.id, playlist.name)}>✕</button>
         </div>
       {/each}
     </div>
@@ -88,17 +78,23 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    background-color: var(--bg);
+    color: var(--text);
   }
+
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
   }
+
   h2 {
     font-size: 1.75rem;
     font-weight: 700;
+    color: var(--text);
   }
+
   .add-btn {
     color: white;
     border: none;
@@ -106,14 +102,18 @@
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
+    background-color: var(--accent);
   }
+
   .create-row {
     display: flex;
     gap: 0.5rem;
     padding: 0.75rem;
     border-radius: 8px;
     margin-bottom: 1rem;
+    background-color: var(--surface);
   }
+
   .create-input {
     flex: 1;
     padding: 0.5rem 0.75rem;
@@ -121,7 +121,10 @@
     border: none;
     font-size: 0.95rem;
     outline: none;
+    background-color: var(--surface-light);
+    color: var(--text);
   }
+
   .create-btn {
     color: white;
     border: none;
@@ -129,7 +132,9 @@
     border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
+    background-color: var(--success);
   }
+
   .empty-state {
     flex: 1;
     display: flex;
@@ -138,15 +143,17 @@
     justify-content: center;
     gap: 0.5rem;
   }
-  .playlist-list {
-    flex: 1;
-    overflow-y: auto;
-  }
+
+  .text-secondary { color: var(--text-secondary); }
+
+  .playlist-list { flex: 1; overflow-y: auto; }
+
   .playlist-item {
     display: flex;
     align-items: center;
-    border-bottom: 1px solid;
+    border-bottom: 1px solid var(--border-color);
   }
+
   .playlist-click {
     display: flex;
     align-items: center;
@@ -161,9 +168,9 @@
     font: inherit;
     transition: background-color 0.15s;
   }
-  .playlist-click:hover {
-    background-color: rgba(108, 92, 231, 0.08);
-  }
+
+  .playlist-click:hover { background-color: rgba(108, 92, 231, 0.08); }
+
   .playlist-icon {
     width: 44px;
     height: 44px;
@@ -173,28 +180,37 @@
     justify-content: center;
     font-size: 1.2rem;
     flex-shrink: 0;
+    background-color: var(--accent);
   }
+
   .playlist-info {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
   }
+
   .playlist-name {
     font-size: 1rem;
     font-weight: 500;
+    color: var(--text);
   }
+
   .playlist-meta {
     font-size: 0.8rem;
+    color: var(--text-secondary);
   }
+
   .chevron {
     font-size: 1.5rem;
     padding-right: 0.5rem;
+    color: var(--text-muted);
   }
+
   .delete-btn {
     background: none;
     border: none;
-    color: #e74c3c;
+    color: var(--error);
     cursor: pointer;
     font-size: 1rem;
     padding: 0.5rem;

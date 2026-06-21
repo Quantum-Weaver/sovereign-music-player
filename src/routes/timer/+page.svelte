@@ -22,7 +22,6 @@
         if (interval) clearInterval(interval);
         interval = null;
         duration = 0;
-        // Will trigger audio fadeout in Phase 6
       }
     }, 60000);
   }
@@ -45,47 +44,49 @@
   }
 </script>
 
-<div class="timer-page" style="background-color: {colors.background}; color: {colors.text};">
+<div
+  class="timer-page"
+  style="
+    --accent: {colors.accent};
+    --text: {colors.text};
+    --text-secondary: {colors.textSecondary};
+    --bg-surface: {colors.surface};
+    --bg-surface-light: {colors.surfaceLight};
+    --border-color: {colors.border};
+    --warning: {colors.warning};
+  "
+>
   <h2>Sleep Timer</h2>
 
   {#if isRunning}
     <div class="active-timer">
-      <p style="color: {colors.textSecondary};">Music will stop in</p>
-      <span class="timer-value" style="color: {colors.accent};">{formatTime(remaining)}</span>
-      <div class="progress-bar" style="background-color: {colors.surfaceLight};">
+      <p class="timer-label">Music will stop in</p>
+      <span class="timer-value">{formatTime(remaining)}</span>
+      <div class="progress-bar">
         <div
           class="progress-fill"
-          style="background-color: {colors.accent}; width: {((duration - remaining) / duration) * 100}%;"
+          style="width: {((duration - remaining) / duration) * 100}%;"
         ></div>
       </div>
-      <button class="cancel-btn" style="background-color: {colors.warning};" onclick={cancelTimer}>
-        Cancel Timer
-      </button>
+      <button class="cancel-btn" onclick={cancelTimer}>Cancel Timer</button>
     </div>
   {:else}
-    <p class="label" style="color: {colors.textSecondary};">Select duration</p>
+    <p class="label">Select duration</p>
     <div class="presets">
       {#each PRESETS as mins}
-        <button
-          class="preset-btn"
-          style="background-color: {colors.surface}; border-color: {colors.border}; color: {colors.text};"
-          onclick={() => startTimer(mins)}
-          aria-label="Accent color: {colors}"
-        >
+        <button class="preset-btn" onclick={() => startTimer(mins)}>
           {formatTime(mins)}
         </button>
       {/each}
     </div>
 
-    <div class="fade-row" style="border-top-color: {colors.border};">
+    <div class="fade-row">
       <span>Fade out at end</span>
       <button
-        class="toggle"
-        style="background-color: {fadeOut ? colors.accent : colors.surfaceLight};"
+        class="toggle {fadeOut ? 'active' : ''}"
         onclick={() => fadeOut = !fadeOut}
-        aria-label="Accent color: {colors}"
       >
-        <span class="dot" class:active={fadeOut}></span>
+        <span class="dot"></span>
       </button>
     </div>
   {/if}
@@ -95,12 +96,23 @@
   .timer-page {
     padding: 2rem;
     height: 100%;
+    background-color: var(--bg);
+    color: var(--text);
   }
+
   h2 {
     font-size: 1.75rem;
     font-weight: 700;
     margin-bottom: 2rem;
+    color: var(--text);
   }
+
+  .label {
+    margin-bottom: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  /* Active Timer */
   .active-timer {
     display: flex;
     flex-direction: column;
@@ -108,21 +120,32 @@
     padding-top: 3rem;
     gap: 1rem;
   }
+
+  .timer-label {
+    color: var(--text-secondary);
+  }
+
   .timer-value {
     font-size: 3rem;
     font-weight: 700;
+    color: var(--accent);
   }
+
   .progress-bar {
     width: 100%;
     height: 4px;
     border-radius: 2px;
     margin: 1rem 0;
+    background-color: var(--bg-surface-light);
   }
+
   .progress-fill {
     height: 100%;
     border-radius: 2px;
+    background-color: var(--accent);
     transition: width 60s linear;
   }
+
   .cancel-btn {
     color: white;
     border: none;
@@ -130,36 +153,44 @@
     border-radius: 20px;
     font-weight: 600;
     cursor: pointer;
+    background-color: var(--warning);
   }
-  .label {
-    margin-bottom: 0.75rem;
-  }
+
+  /* Presets */
   .presets {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
   }
+
   .preset-btn {
     width: calc(33% - 0.35rem);
     padding: 1.2rem 0;
     border-radius: 12px;
-    border: 1px solid;
+    border: 1px solid var(--border-color);
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
+    background-color: var(--bg-surface);
+    color: var(--text);
     transition: background-color 0.15s;
   }
+
   .preset-btn:hover {
     background-color: rgba(108, 92, 231, 0.15);
   }
+
+  /* Fade Toggle */
   .fade-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding-top: 1.5rem;
     margin-top: 2rem;
-    border-top: 1px solid;
+    border-top: 1px solid var(--border-color);
+    color: var(--text);
   }
+
   .toggle {
     width: 48px;
     height: 28px;
@@ -169,8 +200,14 @@
     display: flex;
     align-items: center;
     padding: 3px;
+    background-color: var(--bg-surface-light);
     transition: background-color 0.2s;
   }
+
+  .toggle.active {
+    background-color: var(--accent);
+  }
+
   .dot {
     width: 22px;
     height: 22px;
@@ -178,7 +215,8 @@
     background-color: white;
     transition: transform 0.2s;
   }
-  .dot.active {
+
+  .toggle.active .dot {
     transform: translateX(20px);
   }
 </style>

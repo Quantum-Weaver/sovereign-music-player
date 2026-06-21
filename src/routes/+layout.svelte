@@ -11,9 +11,12 @@
   let { children }: { children: Snippet } = $props();
   let currentRoute = $state('library');
 
+  import { libraryStore } from '$lib/stores/library.svelte';
+
   onMount(() => {
     themeStore.loadTheme();
     playlistStore.loadPlaylists();
+    libraryStore.initDatabase();
   });
 
   $effect(() => {

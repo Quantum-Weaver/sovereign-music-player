@@ -15,19 +15,30 @@
   };
 </script>
 
-<div class="settings-page" style="background-color: {colors.background}; color: {colors.text};">
+<div
+  class="settings-page"
+  style="
+    --accent: {colors.accent};
+    --text: {colors.text};
+    --text-secondary: {colors.textSecondary};
+    --text-muted: {colors.textMuted};
+    --bg-surface: {colors.surface};
+    --border-color: {colors.border};
+  "
+>
   <h2>Settings</h2>
 
   <div class="content">
     <!-- Theme Presets -->
-    <h3 style="color: {colors.textSecondary};">THEME PRESETS</h3>
+    <h3>THEME PRESETS</h3>
     <div class="preset-grid">
       {#each Object.entries(PRESET_THEMES) as [key, theme]}
         <button
           class="preset-circle"
-          style="background-color: {theme.accentColor}; border: {config.presetName === key || (!config.presetName && key === 'dark') ? '3px solid ' + colors.text : 'none'};"
+          class:selected={config.presetName === key || (!config.presetName && key === 'dark')}
+          style="background-color: {theme.accentColor};"
           onclick={() => themeStore.setPreset(key)}
-          aria-label="Accent color: {colors}"
+          aria-label="Theme: {key}"
         >
           <span>{presetEmojis[key] || '🎨'}</span>
         </button>
@@ -35,12 +46,13 @@
     </div>
 
     <!-- Accent Color -->
-    <h3 style="color: {colors.textSecondary};">ACCENT COLOR</h3>
+    <h3>ACCENT COLOR</h3>
     <div class="color-row">
       {#each accentColors as color}
         <button
           class="color-dot"
-          style="background-color: {color}; border: {config.accentColor === color ? '3px solid ' + colors.text : 'none'};"
+          class:selected={config.accentColor === color}
+          style="background-color: {color};"
           onclick={() => themeStore.setAccentColor(color)}
           aria-label="Accent color: {color}"
         ></button>
@@ -48,13 +60,12 @@
     </div>
 
     <!-- Display Mode -->
-    <h3 style="color: {colors.textSecondary};">DISPLAY MODE</h3>
+    <h3>DISPLAY MODE</h3>
     <div class="option-row">
       {#each modeOptions as mode}
         <button
           class="option-btn"
           class:active={config.mode === mode}
-          style="background-color: {config.mode === mode ? colors.accent : colors.surface}; border-color: {colors.border}; color: {config.mode === mode ? '#fff' : colors.text};"
           onclick={() => themeStore.setMode(mode)}
         >
           {mode === 'dark' ? '🌙 Dark' : mode === 'light' ? '☀️ Light' : '🖤 AMOLED'}
@@ -63,13 +74,12 @@
     </div>
 
     <!-- Font Size -->
-    <h3 style="color: {colors.textSecondary};">FONT SIZE</h3>
+    <h3>FONT SIZE</h3>
     <div class="option-row">
       {#each fontSizeOptions as size}
         <button
           class="option-btn"
           class:active={config.fontSize === size}
-          style="background-color: {config.fontSize === size ? colors.accent : colors.surface}; border-color: {colors.border}; color: {config.fontSize === size ? '#fff' : colors.text};"
           onclick={() => themeStore.setFontSize(size)}
         >
           {size.charAt(0).toUpperCase() + size.slice(1)}
@@ -78,13 +88,12 @@
     </div>
 
     <!-- Album Art Shape -->
-    <h3 style="color: {colors.textSecondary};">ALBUM ART SHAPE</h3>
+    <h3>ALBUM ART SHAPE</h3>
     <div class="option-row">
       {#each shapeOptions as shape}
         <button
           class="option-btn"
           class:active={config.albumArtShape === shape}
-          style="background-color: {config.albumArtShape === shape ? colors.accent : colors.surface}; border-color: {colors.border}; color: {config.albumArtShape === shape ? '#fff' : colors.text};"
           onclick={() => themeStore.setAlbumArtShape(shape)}
         >
           {shape.charAt(0).toUpperCase() + shape.slice(1)}
@@ -93,7 +102,7 @@
     </div>
 
     <!-- App Info -->
-    <p class="app-info" style="color: {colors.textMuted};">
+    <p class="app-info">
       Sovereign Music Player v1.0<br/>
       Built with Aethelred · No ads · No subscriptions · Your music, your device
     </p>
@@ -105,75 +114,116 @@
     padding: 2rem;
     height: 100%;
     overflow-y: auto;
+    background-color: var(--bg);
+    color: var(--text);
   }
+
   h2 {
     font-size: 1.75rem;
     font-weight: 700;
     margin-bottom: 1.5rem;
+    color: var(--text);
   }
+
   h3 {
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 1px;
     margin-top: 1.5rem;
     margin-bottom: 0.6rem;
+    color: var(--text-secondary);
   }
+
   .content {
     max-width: 500px;
   }
+
+  /* Presets */
   .preset-grid {
     display: flex;
     gap: 0.75rem;
     flex-wrap: wrap;
   }
+
   .preset-circle {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    border: none;
+    border: 3px solid transparent;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.2rem;
-    transition: transform 0.15s;
+    transition: transform 0.15s, border-color 0.15s;
   }
+
   .preset-circle:hover {
     transform: scale(1.1);
   }
+
+  .preset-circle.selected {
+    border-color: var(--text);
+  }
+
+  /* Color Dots */
   .color-row {
     display: flex;
     gap: 0.6rem;
     flex-wrap: wrap;
   }
+
   .color-dot {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    border: none;
+    border: 3px solid transparent;
     cursor: pointer;
-    transition: transform 0.15s;
+    transition: transform 0.15s, border-color 0.15s;
   }
+
   .color-dot:hover {
     transform: scale(1.15);
   }
+
+  .color-dot.selected {
+    border-color: var(--text);
+  }
+
+  /* Option Buttons */
   .option-row {
     display: flex;
     gap: 0.5rem;
   }
+
   .option-btn {
     padding: 0.5rem 1rem;
     border-radius: 8px;
-    border: 1px solid;
+    border: 1px solid var(--border-color);
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.15s;
+    background-color: var(--bg-surface);
+    color: var(--text);
+    transition: background-color 0.15s, color 0.15s;
   }
+
+  .option-btn:hover {
+    background-color: rgba(108, 92, 231, 0.15);
+  }
+
+  .option-btn.active {
+    background-color: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* App Info */
   .app-info {
     margin-top: 2rem;
     font-size: 0.8rem;
     text-align: center;
     line-height: 1.5;
+    color: var(--text-muted);
   }
 </style>

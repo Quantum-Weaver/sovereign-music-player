@@ -45,41 +45,46 @@
   }
 </script>
 
-<div class="artist-page" style="background-color: {colors.background}; color: {colors.text};">
-  <button class="back-btn" style="color: {colors.accent};" onclick={goBack}>
-    ← Library
-  </button>
+<div
+  class="artist-page"
+  style="
+    --accent: {colors.accent};
+    --text: {colors.text};
+    --text-secondary: {colors.textSecondary};
+    --text-muted: {colors.textMuted};
+    --border-color: {colors.border};
+    --bg-surface-light: {colors.surfaceLight};
+  "
+>
+  <button class="back-btn" onclick={goBack}>← Library</button>
 
   <div class="hero">
-    <div class="avatar" style="background-color: {colors.accent};">
+    <div class="avatar">
       <span>{artistName.charAt(0).toUpperCase()}</span>
     </div>
     <h1>{artistName}</h1>
-    <p style="color: {colors.textSecondary};">
+    <p class="artist-stats">
       {albums.length} album{albums.length !== 1 ? 's' : ''} · {artistTracks.length} track{artistTracks.length !== 1 ? 's' : ''}
     </p>
-    <button class="play-btn" style="background-color: {colors.accent};" onclick={playAll}>
-      ▶ Play All
-    </button>
+    <button class="play-btn" onclick={playAll}>▶ Play All</button>
   </div>
 
   <div class="album-list">
     {#each albums as album (album.id)}
       <button
         class="album-item"
-        style="border-bottom-color: {colors.border};"
         onclick={() => window.location.href = `/library/album/${encodeURIComponent(album.name)}?artist=${encodeURIComponent(artistName)}`}
       >
-        <div class="album-art" style="background-color: {colors.surfaceLight};">
+        <div class="album-art-thumb">
           <span>💿</span>
         </div>
         <div class="album-info">
-          <span class="album-name" style="color: {colors.text};">{album.name}</span>
-          <span class="album-meta" style="color: {colors.textSecondary};">
+          <span class="album-name">{album.name}</span>
+          <span class="album-meta">
             {album.tracks.length} tracks{album.year ? ` · ${album.year}` : ''}
           </span>
         </div>
-        <span class="chevron" style="color: {colors.textMuted};">›</span>
+        <span class="chevron">›</span>
       </button>
     {/each}
   </div>
@@ -91,7 +96,10 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    background-color: var(--bg);
+    color: var(--text);
   }
+
   .back-btn {
     background: none;
     border: none;
@@ -101,7 +109,9 @@
     padding: 0;
     margin-bottom: 1.5rem;
     align-self: flex-start;
+    color: var(--accent);
   }
+
   .hero {
     display: flex;
     flex-direction: column;
@@ -109,6 +119,7 @@
     gap: 0.5rem;
     margin-bottom: 2rem;
   }
+
   .avatar {
     width: 100px;
     height: 100px;
@@ -119,12 +130,20 @@
     font-size: 2.5rem;
     font-weight: 700;
     color: white;
+    background-color: var(--accent);
     margin-bottom: 0.5rem;
   }
+
   h1 {
     font-size: 1.5rem;
     font-weight: 700;
+    color: var(--text);
   }
+
+  .artist-stats {
+    color: var(--text-secondary);
+  }
+
   .play-btn {
     color: white;
     border: none;
@@ -133,34 +152,40 @@
     font-weight: 600;
     cursor: pointer;
     margin-top: 0.5rem;
+    background-color: var(--accent);
     transition: filter 0.15s;
   }
+
   .play-btn:hover {
     filter: brightness(1.1);
   }
+
   .album-list {
     flex: 1;
     overflow-y: auto;
   }
+
   .album-item {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 0.5rem;
-    border-bottom: 1px solid;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
     background: transparent;
-    border-left: none;
-    border-right: none;
-    border-top: none;
     cursor: pointer;
     width: 100%;
     text-align: left;
     transition: background-color 0.15s;
+    color: inherit;
+    font: inherit;
   }
+
   .album-item:hover {
     background-color: rgba(108, 92, 231, 0.08);
   }
-  .album-art {
+
+  .album-art-thumb {
     width: 48px;
     height: 48px;
     border-radius: 4px;
@@ -169,21 +194,29 @@
     justify-content: center;
     font-size: 1.2rem;
     flex-shrink: 0;
+    background-color: var(--bg-surface-light);
   }
+
   .album-info {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
   }
+
   .album-name {
     font-size: 1rem;
     font-weight: 500;
+    color: var(--text);
   }
+
   .album-meta {
     font-size: 0.85rem;
+    color: var(--text-secondary);
   }
+
   .chevron {
     font-size: 1.5rem;
+    color: var(--text-muted);
   }
 </style>

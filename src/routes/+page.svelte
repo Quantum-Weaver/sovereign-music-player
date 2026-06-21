@@ -52,8 +52,10 @@
     libraryStore.setScanProgress(0);
     try {
       const dirPath = selected as string;
-      const tracks = await invoke('scan_directory', { dirPath });
-      libraryStore.setTracks(tracks as Track[]);
+      const result = await invoke('scan_directory', { dirPath });
+      const scannedTracks = result as Track[];
+      await libraryStore.saveScannedTracks(scannedTracks);
+      libraryStore.setTracks(scannedTracks);
     } catch (error) {
       console.error('Scan failed:', error);
     } finally {
@@ -70,14 +72,84 @@
 <div class="library-page">
   <div class="header">
     <h1>Library</h1>
-    <button class="scan-btn" style="background-color: var(--accent);" onclick={scanLibrary}>
-      Scan Library
+    <button
+      class="scan-btn"
+      onclick={scanLibrary}
+      disabled={isScanning}
+    >
+      {isScanning
+        ? `Scanning ${Math.round(scanProgress * 100)}%`
+        : tracks.length > 0
+          ? 'Rescan'
+          : 'Scan Library'}
     </button>
   </div>
-  <div class="placeholder" style="color: var(--text-secondary);">
-    <span style="font-size: 4rem --accent-glow;">🎵</span>
-    <p>Your music library will appear here</p>
-  </div>
+
+  {#if tracks.length === 0 && !isScanning}
+    <div class="placeholder">
+      <span class="text-6xl drop-shadow-[0_0_12px_var(--accent)]">🎵</span>
+      <p>Your music library will appear here</p>
+    </div>
+  {:else}
+    <input
+      type="text"
+      class="search-input"
+      placeholder="Search artists, albums, genres..."
+      bind:value={searchQuery}
+    />
+
+    <div class="tabs">
+      {#each ['artists', 'albums', 'genres'] as mode}
+        <button
+          class="tab"
+          class:active={viewMode === mode}
+          onclick={() => viewMode = mode as 'artists' | 'albums' | 'genres'}
+        >
+          {mode.charAt(0).toUpperCase() + mode.slice(1)}
+        </button>
+      {/each}
+    </div>
+
+    <div class="list">
+      {#if viewMode === 'artists'}
+        {#each filteredArtists as artist (artist.id)}
+          <button
+            class="list-item"
+            onclick={() => navigate(`/library/artist/${encodeURIComponent(artist.name)}`)}
+          >
+            <span class="item-text">{artist.name}</span>
+            <span class="item-sub">{artist.trackCount} tracks</span>
+          </button>
+        {/each}
+        {#if filteredArtists.length === 0 && searchQuery}
+          <p class="empty-search">No artists match your search.</p>
+        {/if}
+      {:else if viewMode === 'albums'}
+        {#each filteredAlbums as album (album.id)}
+          <button
+            class="list-item"
+            onclick={() => navigate(`/library/album/${encodeURIComponent(album.name)}?artist=${encodeURIComponent(album.artist)}`)}
+          >
+            <span class="item-text">{album.name}</span>
+            <span class="item-sub">{album.artist}</span>
+          </button>
+        {/each}
+        {#if filteredAlbums.length === 0 && searchQuery}
+          <p class="empty-search">No albums match your search.</p>
+        {/if}
+      {:else}
+        {#each filteredGenres as genre (genre)}
+          <button class="list-item">
+            <span class="item-text">{genre}</span>
+            <span class="item-sub">{tracks.filter(t => t.genre === genre).length} tracks</span>
+          </button>
+        {/each}
+        {#if filteredGenres.length === 0 && searchQuery}
+          <p class="empty-search">No genres match your search.</p>
+        {/if}
+      {/if}
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -93,7 +165,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
   }
 
   h1 {
@@ -110,19 +182,18 @@
     font-weight: 600;
     cursor: pointer;
     background-color: var(--accent);
-    box-shadow: var(--accent-glow);
+    box-shadow: 0 0 20px rgba(108, 92, 231, 0.2);
     transition: all 0.2s ease;
   }
 
-  .scan-btn:hover {
-    box-shadow: var(--accent-glow-hover);
+  .scan-btn:hover:not(:disabled) {
+    box-shadow: 0 0 30px rgba(108, 92, 231, 0.4);
     transform: translateY(-1px);
   }
 
   .scan-btn:disabled {
     opacity: 0.7;
     cursor: default;
-    transform: none;
   }
 
   .placeholder {
@@ -134,5 +205,91 @@
     gap: 1rem;
     font-size: 1.1rem;
     color: var(--text-secondary);
+  }
+
+  .search-input {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, rgba(99, 110, 114, 0.3));
+    background-color: var(--bg-surface);
+    color: var(--text);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input:focus {
+    border-color: var(--accent);
+  }
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color, rgba(99, 110, 114, 0.3));
+    margin-bottom: 0.5rem;
+  }
+
+  .tab {
+    padding: 0.6rem 1.25rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+
+  .tab:hover {
+    color: var(--accent);
+  }
+
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .list {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 0.5rem;
+    border-bottom: 1px solid var(--border-color, rgba(99, 110, 114, 0.15));
+    background: transparent;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    color: var(--text);
+    transition: background-color 0.15s;
+    font-size: inherit;
+  }
+
+  .list-item:hover {
+    background-color: rgba(108, 92, 231, 0.08);
+  }
+
+  .item-text {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .item-sub {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .empty-search {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
   }
 </style>

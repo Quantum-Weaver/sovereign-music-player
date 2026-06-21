@@ -1,3 +1,4 @@
+import Database from '@tauri-apps/plugin-sql';
 import type { Track, Album, Artist } from '$lib/types/types';
 
 let tracks = $state<Track[]>([]);
@@ -6,6 +7,23 @@ let artists = $state<Artist[]>([]);
 let isScanning = $state(false);
 let scanProgress = $state(0);
 let lastScanned = $state<number | null>(null);
+let db = $state<Database | null>(null);
+
+// Helper: Bulk insert for performance
+function bulkInsert(table: string, cols: string[], vals: unknown[][]): [string, unknown[]] {
+    const values = vals.flat();
+    const def: string[] = [];
+    let x = 1;
+    for (let i = 0; i < vals.length; i++) {
+        const f: string[] = [];
+        for (let j = 0; j < cols.length; j++) {
+            f[j] = "$" + x;
+            x++;
+        }
+        def[i] = "(" + f.join(",") + ")";
+    }
+    return [`INSERT INTO ${table} (${cols.join(",")}) VALUES ${def.join(",")}`, values];
+}
 
 export const libraryStore = {
   get tracks() { return tracks; },
@@ -15,10 +33,69 @@ export const libraryStore = {
   get scanProgress() { return scanProgress; },
   get lastScanned() { return lastScanned; },
 
+  // Initialize database and load saved library
+  async initDatabase() {
+    db = await Database.load('sqlite:songs.db');
+    const rows = await db.select('SELECT * FROM songs ORDER BY artist, title');
+    const savedTracks: Track[] = (rows as any[]).map((row: any) => ({
+      id: row.id,
+      uri: row.uri,
+      filename: row.filename,
+      title: row.title,
+      artist: row.artist,
+      album: row.album,
+      genre: row.genre || undefined,
+      year: row.year || undefined,
+      trackNumber: row.track_number || undefined,
+      duration: row.duration || 0,
+      coverArt: row.cover_art || undefined,
+      dateAdded: row.date_added || 0,
+    }));
+    if (savedTracks.length > 0) {
+      this.setTracks(savedTracks);
+    }
+  },
+
+  // Save scanned tracks to database with incremental logic
+  async saveScannedTracks(scannedTracks: Track[]) {
+    if (!db) return;
+    
+    const existingRows = await db.select('SELECT uri FROM songs');
+    const existingUris = new Set((existingRows as any[]).map((r: any) => r.uri));
+    const scannedUris = new Set(scannedTracks.map(t => t.uri));
+    
+    const newTracks = scannedTracks.filter(t => !existingUris.has(t.uri));
+    const deletedUris = [...existingUris].filter(uri => !scannedUris.has(uri));
+    
+    for (const uri of deletedUris) {
+      await db.execute('DELETE FROM songs WHERE uri = $1', [uri as string]);
+    }
+    
+    // Insert new tracks in bulk
+    if (newTracks.length > 0) {
+      const cols = ['id', 'uri', 'filename', 'title', 'artist', 'album', 'genre', 'year', 'track_number', 'duration', 'cover_art', 'date_added', 'last_scanned'];
+      const now = Math.floor(Date.now() / 1000);
+      const vals = newTracks.map(t => [
+        t.id, t.uri, t.filename, t.title, t.artist, t.album,
+        t.genre || null, t.year || null, t.trackNumber || null,
+        t.duration, t.coverArt || null, t.dateAdded || now, now
+      ]);
+      const [statement, values] = bulkInsert('songs', cols, vals);
+      await db.execute(statement, values);
+    }
+    
+    // Update last_scanned for existing tracks that are still present
+    const now = Math.floor(Date.now() / 1000);
+    for (const uri of scannedUris) {
+      if (existingUris.has(uri)) {
+        await db.execute('UPDATE songs SET last_scanned = $1 WHERE uri = $2', [now, uri]);
+      }
+    }
+  },
+
   setTracks(newTracks: Track[]) {
     tracks = newTracks;
     
-    // Build albums from tracks
     const albumMap = new Map<string, Album>();
     const artistMap = new Map<string, Artist>();
 
@@ -48,7 +125,6 @@ export const libraryStore = {
       artistMap.get(track.artist)!.trackCount++;
     }
 
-    // Link albums to artists
     for (const album of albumMap.values()) {
       const artist = artistMap.get(album.artist);
       if (artist) artist.albums.push(album);

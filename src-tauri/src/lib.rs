@@ -6,17 +6,23 @@ use lofty::file::AudioFile;
 use lofty::file::TaggedFileExt;
 use lofty::tag::Accessor;
 use lofty::tag::ItemKey;
+use tauri_plugin_sql::{Migration, MigrationKind};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TrackInfo {
-    pub path: String,
+    pub id: String,
+    pub uri: String,
+    pub filename: String,
     pub title: String,
     pub artist: String,
     pub album: String,
     pub genre: Option<String>,
     pub year: Option<u32>,
+    #[serde(rename = "trackNumber")]
     pub track_number: Option<u32>,
     pub duration: f64,
+    pub cover_art: Option<String>,
+    pub date_added: u64,
 }
 
 fn parse_duration(path: &Path) -> f64 {
@@ -28,11 +34,20 @@ fn parse_duration(path: &Path) -> f64 {
 
 fn parse_metadata(path: &Path) -> TrackInfo {
     let filename = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("Unknown")
+        .to_string();
+
+    let uri = path.to_string_lossy().to_string();
+    let id = uri.clone();
+
+    let mut title = path
         .file_stem()
         .and_then(|s| s.to_str())
-        .unwrap_or("Unknown");
-
-    let mut title = filename.to_string();
+        .unwrap_or("Unknown")
+        .to_string();
+        
     let mut artist = String::from("Unknown Artist");
     let mut album = String::from("Unknown Album");
     let mut genre: Option<String> = None;
@@ -52,8 +67,6 @@ fn parse_metadata(path: &Path) -> TrackInfo {
             }
             genre = tag.genre().map(|g| g.to_string());
             
-            // Use ItemKey for format-specific fields
-            
             year = tag.get_string(&ItemKey::RecordingDate)
                 .and_then(|s| s.parse::<u32>().ok());
             track_number = tag.get_string(&ItemKey::TrackNumber)
@@ -71,9 +84,17 @@ fn parse_metadata(path: &Path) -> TrackInfo {
     }
 
     let duration = parse_duration(path);
+    
+    // Get date_added from file modification time
+    let date_added = std::fs::metadata(path)
+        .and_then(|m| m.modified())
+        .map(|t| t.duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs())
+        .unwrap_or(0);
 
     TrackInfo {
-        path: path.to_string_lossy().to_string(),
+        id,
+        uri,
+        filename,
         title,
         artist,
         album,
@@ -81,6 +102,8 @@ fn parse_metadata(path: &Path) -> TrackInfo {
         year,
         track_number,
         duration,
+        cover_art: None,
+        date_added,
     }
 }
 
@@ -121,8 +144,35 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let songs_migrations = vec![
+        Migration {
+            version: 1,
+            description: "create_songs_table",
+            sql: "CREATE TABLE IF NOT EXISTS songs (
+                id TEXT PRIMARY KEY,
+                uri TEXT NOT NULL UNIQUE,
+                filename TEXT NOT NULL,
+                title TEXT NOT NULL,
+                artist TEXT NOT NULL,
+                album TEXT NOT NULL,
+                genre TEXT,
+                year INTEGER,
+                track_number INTEGER,
+                duration REAL NOT NULL DEFAULT 0,
+                cover_art TEXT,
+                date_added INTEGER NOT NULL DEFAULT 0,
+                last_scanned INTEGER NOT NULL DEFAULT 0
+            );",
+            kind: MigrationKind::Up,
+        }
+    ];
+
     tauri::Builder::default()
-        .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations("sqlite:songs.db", songs_migrations)
+                .build()
+        )
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
