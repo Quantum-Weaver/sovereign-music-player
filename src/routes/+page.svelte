@@ -2,6 +2,9 @@
   import { libraryStore } from '$lib/stores/library.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
+  import { open } from '@tauri-apps/plugin-dialog';
+  import { invoke } from '@tauri-apps/api/core';
+  import type { Track } from '$lib/types/types';
 
   let searchQuery = $state('');
   let viewMode = $state<'artists' | 'albums' | 'genres'>('artists');
@@ -36,9 +39,27 @@
       : genres
   );
 
-  function scanLibrary() {
-    // Will wire to Rust backend in Phase 6
-    console.log('Scan requested');
+  async function scanLibrary() {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: 'Select your music folder'
+    });
+
+    if (!selected) return;
+
+    libraryStore.setScanning(true);
+    libraryStore.setScanProgress(0);
+    try {
+      const dirPath = selected as string;
+      const tracks = await invoke('scan_directory', { dirPath });
+      libraryStore.setTracks(tracks as Track[]);
+    } catch (error) {
+      console.error('Scan failed:', error);
+    } finally {
+      libraryStore.setScanning(false);
+      libraryStore.setScanProgress(0);
+    }
   }
 
   function navigate(path: string) {
@@ -49,7 +70,7 @@
 <div class="library-page">
   <div class="header">
     <h1 style="color: var(--text);">Library</h1>
-    <button class="scan-btn" style="background-color: var(--accent);">
+    <button class="scan-btn" style="background-color: var(--accent);" onclick={scanLibrary}>
       Scan Library
     </button>
   </div>

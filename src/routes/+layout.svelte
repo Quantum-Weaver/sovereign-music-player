@@ -1,3 +1,4 @@
+// routes/+layout.svelte
 <script lang="ts">
   import { themeStore } from '$lib/stores/theme.svelte';
   import { playlistStore } from '$lib/stores/playlist.svelte';
