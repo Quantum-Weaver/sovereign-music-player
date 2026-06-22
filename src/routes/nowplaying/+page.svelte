@@ -4,6 +4,7 @@
   import { getThemeColors } from '$lib/theme/theme';
   import PlayerControls from '$lib/components/PlayerControls.svelte';
   import { goto } from '$app/navigation';
+  import EmojiPalette from '$lib/components/EmojiPalette.svelte';
 
   const colors = $derived(getThemeColors(themeStore.config));
   const currentTrack = $derived(playerStore.currentTrack);
@@ -47,15 +48,15 @@
         {/if}
       </div>
     </div>
-
+    
     <div class="track-info">
       <h2>{currentTrack.title}</h2>
       <p class="artist">{currentTrack.artist}</p>
       <p class="album">{currentTrack.album}</p>
     </div>
 
-    <PlayerControls />
-
+    <PlayerControls />      
+    
     <div class="extra-controls">
       <button
         class="ctrl-btn"
@@ -70,6 +71,7 @@
         aria-label="Repeat"
       >{repeatIcon}</button>
     </div>
+    <EmojiPalette />
   {/if}
 </div>
 

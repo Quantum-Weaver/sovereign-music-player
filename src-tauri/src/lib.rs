@@ -197,6 +197,22 @@ pub fn run() {
                 last_scanned INTEGER NOT NULL DEFAULT 0
             );",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "create_mood_events_table",
+            sql: "CREATE TABLE IF NOT EXISTS mood_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                track_id TEXT NOT NULL,
+                emoji TEXT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                intensity INTEGER DEFAULT 3,
+                comment TEXT,
+                context TEXT DEFAULT 'manual'
+            );
+            CREATE INDEX IF NOT EXISTS idx_mood_track ON mood_events(track_id);
+            CREATE INDEX IF NOT EXISTS idx_mood_time ON mood_events(timestamp);",
+            kind: MigrationKind::Up,
         }
     ];
 

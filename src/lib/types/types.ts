@@ -43,14 +43,15 @@ export interface Playlist {
 }
 
 // Mood event (skip/replay)
+// Mood event (emoji tagging, skip prompts, manual)
 export interface MoodEvent {
-  id: string;
+  id: number;
   trackId: string;
-  type: 'skip' | 'replay';
   emoji: string;
-  userDefinition?: string;
   timestamp: number;
-  answered: boolean;
+  intensity: number;
+  comment?: string;
+  context: 'manual' | 'skip_prompt' | 'track_end';
 }
 
 // Emoji definition (folksonomy)

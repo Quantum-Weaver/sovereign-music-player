@@ -8,16 +8,18 @@
   import type { Snippet } from 'svelte';
   import MiniPlayer from '$lib/components/MiniPlayer.svelte';
   import '../app.css';
-
+  import { moodStore } from '$lib/stores/mood.svelte';
+  
   let { children }: { children: Snippet } = $props();
   let currentRoute = $state('library');
 
   import { libraryStore } from '$lib/stores/library.svelte';
 
   onMount(() => {
-    themeStore.loadTheme();
-    playlistStore.loadPlaylists();
-    libraryStore.initDatabase();
+      themeStore.loadTheme();
+      playlistStore.loadPlaylists();
+      libraryStore.initDatabase();
+      moodStore.initDB();
   });
 
   $effect(() => {
@@ -58,8 +60,8 @@
 >
   <nav class="sidebar">
     <div class="sidebar-header">
-      <span class="text-2xl drop-shadow-[0_0_8px_var(--accent)]">🎵</span>
-      <span class="font-bold text-[var(--text)]">Sovereign</span>
+      <span class="font-bold quantum-entanglement-text text-2xl drop-shadow-[0_0_8px_var(--accent)]">🎵</span>
+      <span class="font-bold quantum-entanglement-text">Sovereign</span>
     </div>
     
     {#each navItems as item}
@@ -67,8 +69,8 @@
         class="nav-item {currentRoute === item.id ? 'active' : ''}"
         onclick={() => handleNav(item.href)}
       >
-        <span class="nav-icon drop-shadow-[0_0_6px_var(--accent)]">{item.icon}</span>
-        <span>{item.label}</span>
+        <span class="nav-icon font-bold quantum-weaver-text drop-shadow-[0_0_6px_var(--accent)]">{item.icon}</span>
+        <span class="quantum-weaver-text text-2xl drop-shadow-[0_0_8px_var(--accent)]">{item.label}</span>
       </button>
     {/each}
   </nav>
