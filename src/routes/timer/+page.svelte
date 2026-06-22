@@ -1,37 +1,71 @@
 <script lang="ts">
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
+  import { playerStore } from '$lib/stores/player.svelte';
 
   const PRESETS = [15, 30, 45, 60, 90, 120];
   const colors = $derived(getThemeColors(themeStore.config));
 
-  let duration = $state(0);
-  let remaining = $state(0);
+  let totalSecs = $state(0);
+  let remainingSecs = $state(0);
   let isRunning = $state(false);
   let fadeOut = $state(false);
   let interval = $state<ReturnType<typeof setInterval> | null>(null);
+  let fadeInterval = $state<ReturnType<typeof setInterval> | null>(null);
+  let preTimerVolume = 0;
+
+  function startFade() {
+    preTimerVolume = playerStore.volume;
+    const FADE_STEPS = 30;
+    let step = 0;
+    fadeInterval = setInterval(() => {
+      step++;
+      playerStore.setVolume(Math.max(0, preTimerVolume * (1 - step / FADE_STEPS)));
+      if (step >= FADE_STEPS) {
+        if (fadeInterval) clearInterval(fadeInterval);
+        fadeInterval = null;
+      }
+    }, 2000);
+  }
+
+  function stopFade(restore: boolean) {
+    if (fadeInterval) {
+      clearInterval(fadeInterval);
+      fadeInterval = null;
+    }
+    if (restore && preTimerVolume > 0) {
+      playerStore.setVolume(preTimerVolume);
+      preTimerVolume = 0;
+    }
+  }
 
   function startTimer(mins: number) {
-    duration = mins;
-    remaining = mins;
+    totalSecs = mins * 60;
+    remainingSecs = mins * 60;
     isRunning = true;
     interval = setInterval(() => {
-      remaining -= 1;
-      if (remaining <= 0) {
+      remainingSecs -= 1;
+      if (fadeOut && remainingSecs === 60 && totalSecs > 60 && !fadeInterval) {
+        startFade();
+      }
+      if (remainingSecs <= 0) {
         isRunning = false;
         if (interval) clearInterval(interval);
         interval = null;
-        duration = 0;
+        stopFade(true);
+        playerStore.pause();
+        totalSecs = 0;
       }
-    }, 60000);
+    }, 1000);
   }
 
   function cancelTimer() {
     isRunning = false;
-    duration = 0;
-    remaining = 0;
+    totalSecs = 0;
+    remainingSecs = 0;
     if (interval) clearInterval(interval);
     interval = null;
+    stopFade(true);
   }
 
   function formatTime(mins: number): string {
@@ -41,6 +75,12 @@
       return `${h}h ${m}m`;
     }
     return `${mins} min`;
+  }
+
+  function formatCountdown(secs: number): string {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 </script>
 
@@ -61,11 +101,11 @@
   {#if isRunning}
     <div class="active-timer">
       <p class="timer-label">Music will stop in</p>
-      <span class="timer-value">{formatTime(remaining)}</span>
+      <span class="timer-value">{formatCountdown(remainingSecs)}</span>
       <div class="progress-bar">
         <div
           class="progress-fill"
-          style="width: {((duration - remaining) / duration) * 100}%;"
+          style="width: {totalSecs > 0 ? ((totalSecs - remainingSecs) / totalSecs) * 100 : 0}%;"
         ></div>
       </div>
       <button class="cancel-btn" onclick={cancelTimer}>Cancel Timer</button>
@@ -143,7 +183,7 @@
     height: 100%;
     border-radius: 2px;
     background-color: var(--accent);
-    transition: width 60s linear;
+    transition: width 1s linear;
   }
 
   .cancel-btn {

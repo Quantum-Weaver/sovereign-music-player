@@ -2,6 +2,7 @@
   import { playerStore } from '$lib/stores/player.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
+  import { goto } from '$app/navigation';
 
   const colors = $derived(getThemeColors(themeStore.config));
   const currentTrack = $derived(playerStore.currentTrack);
@@ -19,7 +20,7 @@
       --mini-border: {colors.border};
     "
   >
-    <button class="mini-click" onclick={() => window.location.href = '/nowplaying'}>
+    <button class="mini-click" onclick={() => goto('/nowplaying')}>
       <div class="artwork">
         <span>💿</span>
       </div>
@@ -60,7 +61,7 @@
     color: inherit;
     font: inherit;
     padding: 0;
-    overflow: hidden;
+    overflow: auto;
   }
 
   .artwork {
@@ -77,14 +78,14 @@
 
   .info {
     flex: 1;
-    overflow: hidden;
+    overflow: auto;
   }
 
   .title {
     font-size: 0.85rem;
     font-weight: 600;
     white-space: nowrap;
-    overflow: hidden;
+    overflow: auto;
     text-overflow: ellipsis;
     display: block;
     color: var(--mini-text);
@@ -93,7 +94,7 @@
   .artist {
     font-size: 0.75rem;
     white-space: nowrap;
-    overflow: hidden;
+    overflow: auto;
     text-overflow: ellipsis;
     display: block;
     color: var(--mini-text-secondary);

@@ -1,25 +1,33 @@
 <script lang="ts">
   import { libraryStore } from '$lib/stores/library.svelte';
   import { playerStore } from '$lib/stores/player.svelte';
+  import { playlistStore } from '$lib/stores/playlist.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
   import { page } from '$app/state';
+  import { goto } from '$app/navigation';
 
   const albumName = decodeURIComponent(page.params.id || '');
   const artistName = decodeURIComponent(page.url.searchParams.get('artist') || '');
 
   const colors = $derived(getThemeColors(themeStore.config));
   const tracks = $derived(libraryStore.tracks);
+  const playlists = $derived(playlistStore.playlists);
 
   const albumTracks = $derived(
     tracks
-      .filter(t => t.album === albumName && t.artist === artistName)
+      .filter(t =>
+        t.album.trim().toLowerCase() === albumName.toLowerCase() &&
+        t.artist.trim().toLowerCase() === artistName.toLowerCase()
+      )
       .sort((a, b) => (a.trackNumber || 0) - (b.trackNumber || 0))
   );
 
   const album = $derived(albumTracks[0]);
   const totalMins = $derived(Math.floor(albumTracks.reduce((sum, t) => sum + (t.duration || 0), 0) / 60));
   const currentTrack = $derived(playerStore.currentTrack);
+
+  let activeMenu = $state<string | null>(null);
 
   function formatDuration(seconds: number): string {
     if (!seconds || seconds <= 0) return '--:--';
@@ -30,20 +38,34 @@
 
   function playTrack(index: number) {
     playerStore.loadQueue(albumTracks, index);
-    window.location.href = '/nowplaying';
+    goto('/nowplaying');
   }
 
   function playAll() {
     if (albumTracks.length > 0) {
       playerStore.loadQueue(albumTracks);
-      window.location.href = '/nowplaying';
+      goto('/nowplaying');
     }
   }
 
   function goBack() {
     window.history.back();
   }
+
+  function toggleMenu(trackId: string, e: MouseEvent) {
+    e.stopPropagation();
+    activeMenu = activeMenu === trackId ? null : trackId;
+  }
+
+  function addToPlaylist(playlistId: string, trackId: string) {
+    playlistStore.addTrack(playlistId, trackId);
+    activeMenu = null;
+  }
 </script>
+
+{#if activeMenu}
+  <button class="backdrop" onclick={() => activeMenu = null} aria-label="Close menu"></button>
+{/if}
 
 <div
   class="album-page"
@@ -53,6 +75,7 @@
     --text-secondary: {colors.textSecondary};
     --text-muted: {colors.textMuted};
     --border-color: {colors.border};
+    --bg-surface: {colors.surface};
   "
 >
   <button class="back-btn" onclick={goBack}>← Artist</button>
@@ -73,26 +96,48 @@
 
   <div class="track-list">
     {#each albumTracks as track, i (track.id)}
-      <button
-        class="track-item"
-        class:playing={currentTrack?.id === track.id}
-        onclick={() => playTrack(i)}
-        oncontextmenu={(e) => { e.preventDefault(); playerStore.addToQueue(track); }}
-      >
-        <span class="track-num">
-          {currentTrack?.id === track.id ? '▶' : (track.trackNumber || i + 1)}
-        </span>
-        <div class="track-info">
-          <span class="track-title">{track.title}</span>
-          <span class="track-artist">{track.artist}</span>
+      <div class="track-row" class:playing={currentTrack?.id === track.id}>
+        <button class="track-item" onclick={() => playTrack(i)}>
+          <span class="track-num">
+            {currentTrack?.id === track.id ? '▶' : (track.trackNumber || i + 1)}
+          </span>
+          <div class="track-info">
+            <span class="track-title">{track.title}</span>
+            <span class="track-artist">{track.artist}</span>
+          </div>
+          <span class="track-dur">{formatDuration(track.duration)}</span>
+        </button>
+        <div class="track-menu-wrap">
+          <button class="menu-btn" onclick={(e) => toggleMenu(track.id, e)} aria-label="Track options">⋮</button>
+          {#if activeMenu === track.id}
+            <div class="playlist-dropdown">
+              <p class="dropdown-label">Add to playlist</p>
+              {#if playlists.length === 0}
+                <p class="dropdown-empty">No playlists yet</p>
+              {:else}
+                {#each playlists as pl (pl.id)}
+                  <button class="dropdown-item" onclick={() => addToPlaylist(pl.id, track.id)}>{pl.name}</button>
+                {/each}
+              {/if}
+            </div>
+          {/if}
         </div>
-        <span class="track-dur">{formatDuration(track.duration)}</span>
-      </button>
+      </div>
     {/each}
   </div>
 </div>
 
 <style>
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9;
+    background: transparent;
+    border: none;
+    cursor: default;
+    padding: 0;
+  }
+
   .album-page {
     padding: 2rem;
     height: 100%;
@@ -143,9 +188,7 @@
     color: var(--text);
   }
 
-  .artist-name {
-    color: var(--text-secondary);
-  }
+  .artist-name { color: var(--text-secondary); }
 
   .album-meta {
     color: var(--text-muted);
@@ -164,13 +207,17 @@
     transition: filter 0.15s;
   }
 
-  .play-btn:hover {
-    filter: brightness(1.1);
-  }
+  .play-btn:hover { filter: brightness(1.1); }
 
   .track-list {
     flex: 1;
     overflow-y: auto;
+  }
+
+  .track-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .track-item {
@@ -179,17 +226,17 @@
     gap: 0.75rem;
     padding: 0.7rem 0.5rem;
     border: none;
-    border-bottom: 1px solid var(--border-color);
     background: transparent;
     cursor: pointer;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     text-align: left;
     transition: background-color 0.15s;
     color: inherit;
     font: inherit;
   }
 
-  .track-item:hover {
+  .track-row:hover .track-item {
     background-color: rgba(108, 92, 231, 0.08);
   }
 
@@ -198,37 +245,34 @@
     text-align: center;
     font-size: 0.9rem;
     color: var(--text-muted);
+    flex-shrink: 0;
   }
 
-  .track-item.playing .track-num {
-    color: var(--accent);
-  }
+  .track-row.playing .track-num { color: var(--accent); }
 
   .track-info {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
-    overflow: hidden;
+    overflow: auto;
   }
 
   .track-title {
     font-size: 0.95rem;
     font-weight: 500;
     white-space: nowrap;
-    overflow: hidden;
+    overflow: auto;
     text-overflow: ellipsis;
     color: var(--text);
   }
 
-  .track-item.playing .track-title {
-    color: var(--accent);
-  }
+  .track-row.playing .track-title { color: var(--accent); }
 
   .track-artist {
     font-size: 0.8rem;
     white-space: nowrap;
-    overflow: hidden;
+    overflow: auto;
     text-overflow: ellipsis;
     color: var(--text-secondary);
   }
@@ -236,5 +280,71 @@
   .track-dur {
     font-size: 0.85rem;
     color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  /* Playlist menu */
+  .track-menu-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    transition: color 0.15s;
+    line-height: 1;
+  }
+
+  .menu-btn:hover { color: var(--text); }
+
+  .playlist-dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 10;
+    min-width: 170px;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    overflow: auto;
+  }
+
+  .dropdown-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    padding: 0.5rem 0.75rem 0.25rem;
+    text-transform: uppercase;
+  }
+
+  .dropdown-empty {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    padding: 0.5rem 0.75rem 0.75rem;
+  }
+
+  .dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text);
+    transition: background-color 0.1s;
+    font: inherit;
+  }
+
+  .dropdown-item:hover {
+    background-color: rgba(108, 92, 231, 0.12);
   }
 </style>

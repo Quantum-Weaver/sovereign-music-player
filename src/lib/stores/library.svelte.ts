@@ -9,20 +9,19 @@ let scanProgress = $state(0);
 let lastScanned = $state<number | null>(null);
 let db = $state<Database | null>(null);
 
-// Helper: Bulk insert for performance
-function bulkInsert(table: string, cols: string[], vals: unknown[][]): [string, unknown[]] {
-    const values = vals.flat();
-    const def: string[] = [];
-    let x = 1;
-    for (let i = 0; i < vals.length; i++) {
-        const f: string[] = [];
-        for (let j = 0; j < cols.length; j++) {
-            f[j] = "$" + x;
-            x++;
-        }
-        def[i] = "(" + f.join(",") + ")";
-    }
-    return [`INSERT INTO ${table} (${cols.join(",")}) VALUES ${def.join(",")}`, values];
+// SQLite bound-parameter limits: 999 max. 13 cols × 50 rows = 650 params per batch.
+const INSERT_BATCH = 50;
+// For IN-clause batches: 1 timestamp param + up to 900 URIs = 901 params per batch.
+const URI_BATCH = 900;
+
+// Build one INSERT statement for a single batch (max INSERT_BATCH rows).
+function buildInsertBatch(vals: unknown[][]): [string, unknown[]] {
+    let p = 1;
+    const rows = vals.map(row => `(${row.map(() => '$' + p++).join(',')})`);
+    return [
+        `INSERT INTO songs (id,uri,filename,title,artist,album,genre,year,track_number,duration,cover_art,date_added,last_scanned) VALUES ${rows.join(',')}`,
+        vals.flat(),
+    ];
 }
 
 export const libraryStore = {
@@ -59,53 +58,74 @@ export const libraryStore = {
   // Save scanned tracks to database with incremental logic
   async saveScannedTracks(scannedTracks: Track[]) {
     if (!db) return;
-    
+
     const existingRows = await db.select('SELECT uri FROM songs');
     const existingUris = new Set((existingRows as any[]).map((r: any) => r.uri));
     const scannedUris = new Set(scannedTracks.map(t => t.uri));
-    
+
     const newTracks = scannedTracks.filter(t => !existingUris.has(t.uri));
-    const deletedUris = [...existingUris].filter(uri => !scannedUris.has(uri));
-    
-    for (const uri of deletedUris) {
-      await db.execute('DELETE FROM songs WHERE uri = $1', [uri as string]);
-    }
-    
-    // Insert new tracks in bulk
-    if (newTracks.length > 0) {
-      const cols = ['id', 'uri', 'filename', 'title', 'artist', 'album', 'genre', 'year', 'track_number', 'duration', 'cover_art', 'date_added', 'last_scanned'];
-      const now = Math.floor(Date.now() / 1000);
-      const vals = newTracks.map(t => [
-        t.id, t.uri, t.filename, t.title, t.artist, t.album,
-        t.genre || null, t.year || null, t.trackNumber || null,
-        t.duration, t.coverArt || null, t.dateAdded || now, now
-      ]);
-      const [statement, values] = bulkInsert('songs', cols, vals);
-      await db.execute(statement, values);
-    }
-    
-    // Update last_scanned for existing tracks that are still present
+    const deletedUris = [...existingUris].filter(uri => !scannedUris.has(uri as string));
+    const keptUris = [...scannedUris].filter(uri => existingUris.has(uri));
     const now = Math.floor(Date.now() / 1000);
-    for (const uri of scannedUris) {
-      if (existingUris.has(uri)) {
-        await db.execute('UPDATE songs SET last_scanned = $1 WHERE uri = $2', [now, uri]);
+
+    // All mutations run inside a single transaction so a mid-scan failure
+    // never leaves the database in a partial state.
+    await db.execute('BEGIN');
+    try {
+      // 1. Remove tracks no longer present on disk.
+      for (const uri of deletedUris) {
+        await db.execute('DELETE FROM songs WHERE uri = $1', [uri as string]);
       }
+
+      // 2. Insert new tracks in batches of INSERT_BATCH rows.
+      if (newTracks.length > 0) {
+        const vals = newTracks.map(t => [
+          t.id, t.uri, t.filename, t.title, t.artist, t.album,
+          t.genre ?? null, t.year ?? null, t.trackNumber ?? null,
+          t.duration, t.coverArt ?? null, t.dateAdded || now, now,
+        ]);
+        for (let i = 0; i < vals.length; i += INSERT_BATCH) {
+          const [stmt, params] = buildInsertBatch(vals.slice(i, i + INSERT_BATCH));
+          await db.execute(stmt, params);
+        }
+      }
+
+      // 3. Stamp last_scanned on tracks that were already in the DB,
+      //    batching the IN clause to stay under the 999-param limit.
+      for (let i = 0; i < keptUris.length; i += URI_BATCH) {
+        const batch = keptUris.slice(i, i + URI_BATCH);
+        let p = 2;
+        const placeholders = batch.map(() => '$' + p++).join(',');
+        await db.execute(
+          `UPDATE songs SET last_scanned = $1 WHERE uri IN (${placeholders})`,
+          [now, ...batch],
+        );
+      }
+
+      await db.execute('COMMIT');
+    } catch (err) {
+      try { await db.execute('ROLLBACK'); } catch { /* ignore rollback error */ }
+      throw err;
     }
   },
 
   setTracks(newTracks: Track[]) {
     tracks = newTracks;
-    
+
     const albumMap = new Map<string, Album>();
     const artistMap = new Map<string, Artist>();
 
     for (const track of newTracks) {
-      const albumKey = `${track.album}|||${track.artist}`;
+      const artistName = track.artist.trim();
+      const albumName = track.album.trim();
+      const artistKey = artistName.toLowerCase();
+      const albumKey = `${albumName.toLowerCase()}|||${artistKey}`;
+
       if (!albumMap.has(albumKey)) {
         albumMap.set(albumKey, {
-          id: albumKey,
-          name: track.album,
-          artist: track.artist,
+          id: `${albumName}|||${artistName}`,
+          name: albumName,
+          artist: artistName,
           tracks: [],
           coverArt: track.coverArt,
           year: track.year,
@@ -114,19 +134,19 @@ export const libraryStore = {
       }
       albumMap.get(albumKey)!.tracks.push(track);
 
-      if (!artistMap.has(track.artist)) {
-        artistMap.set(track.artist, {
-          id: track.artist,
-          name: track.artist,
+      if (!artistMap.has(artistKey)) {
+        artistMap.set(artistKey, {
+          id: artistName,
+          name: artistName,
           albums: [],
           trackCount: 0,
         });
       }
-      artistMap.get(track.artist)!.trackCount++;
+      artistMap.get(artistKey)!.trackCount++;
     }
 
     for (const album of albumMap.values()) {
-      const artist = artistMap.get(album.artist);
+      const artist = artistMap.get(album.artist.toLowerCase());
       if (artist) artist.albums.push(album);
     }
 

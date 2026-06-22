@@ -14,12 +14,10 @@
   const progress = $derived(duration > 0 ? position / duration : 0);
   const repeatIcon = $derived(repeat === 'one' ? '🔂' : repeat === 'all' ? '🔁' : '➡️');
 
-  function formatTime(ms: number): string {
-    if (!ms || ms <= 0) return '0:00';
-    const totalSec = Math.floor(ms / 1000);
-    const mins = Math.floor(totalSec / 60);
-    const secs = totalSec % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  function formatTime(secs: number): string {
+    if (!secs || secs <= 0) return '0:00';
+    const s = Math.floor(secs);
+    return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
   }
 
   function goBack() {

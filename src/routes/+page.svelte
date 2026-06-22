@@ -4,10 +4,14 @@
   import { getThemeColors } from '$lib/theme/theme';
   import { open } from '@tauri-apps/plugin-dialog';
   import { invoke } from '@tauri-apps/api/core';
+  import { listen } from '@tauri-apps/api/event';
+  import { goto } from '$app/navigation';
   import type { Track } from '$lib/types/types';
 
   let searchQuery = $state('');
   let viewMode = $state<'artists' | 'albums' | 'genres'>('artists');
+  let gridView = $state(false);
+  let sortDir = $state<'asc' | 'desc'>('asc');
 
   const colors = $derived(getThemeColors(themeStore.config));
   const tracks = $derived(libraryStore.tracks);
@@ -39,6 +43,21 @@
       : genres
   );
 
+  const sortedArtists = $derived([...filteredArtists].sort((a, b) => {
+    const cmp = a.name.localeCompare(b.name);
+    return sortDir === 'asc' ? cmp : -cmp;
+  }));
+
+  const sortedAlbums = $derived([...filteredAlbums].sort((a, b) => {
+    const cmp = a.name.localeCompare(b.name);
+    return sortDir === 'asc' ? cmp : -cmp;
+  }));
+
+  const sortedGenres = $derived([...filteredGenres].sort((a, b) => {
+    const cmp = a.localeCompare(b);
+    return sortDir === 'asc' ? cmp : -cmp;
+  }));
+
   async function scanLibrary() {
     const selected = await open({
       directory: true,
@@ -50,6 +69,12 @@
 
     libraryStore.setScanning(true);
     libraryStore.setScanProgress(0);
+
+    const unlisten = await listen<{ current: number; total: number }>('scan-progress', (event) => {
+      const { current, total } = event.payload;
+      if (total > 0) libraryStore.setScanProgress(current / total);
+    });
+
     try {
       const dirPath = selected as string;
       const result = await invoke('scan_directory', { dirPath });
@@ -59,30 +84,39 @@
     } catch (error) {
       console.error('Scan failed:', error);
     } finally {
+      unlisten();
       libraryStore.setScanning(false);
       libraryStore.setScanProgress(0);
     }
   }
 
   function navigate(path: string) {
-    window.location.href = path;
+    goto(path);
   }
 </script>
 
 <div class="library-page">
   <div class="header">
     <h1>Library</h1>
-    <button
-      class="scan-btn"
-      onclick={scanLibrary}
-      disabled={isScanning}
-    >
-      {isScanning
-        ? `Scanning ${Math.round(scanProgress * 100)}%`
-        : tracks.length > 0
-          ? 'Rescan'
-          : 'Scan Library'}
-    </button>
+    <div class="header-actions">
+      <button class="icon-btn" onclick={() => gridView = !gridView} title="Toggle view">
+        {gridView ? '☰' : '⊞'}
+      </button>
+      <button class="icon-btn" onclick={() => sortDir = sortDir === 'asc' ? 'desc' : 'asc'} title="Sort direction">
+        {sortDir === 'asc' ? 'A↑' : 'Z↓'}
+      </button>
+      <button
+        class="scan-btn"
+        onclick={scanLibrary}
+        disabled={isScanning}
+      >
+        {isScanning
+          ? `Scanning ${Math.round(scanProgress * 100)}%`
+          : tracks.length > 0
+            ? 'Rescan'
+            : 'Scan Library'}
+      </button>
+    </div>
   </div>
 
   {#if tracks.length === 0 && !isScanning}
@@ -110,41 +144,50 @@
       {/each}
     </div>
 
-    <div class="list">
+    <div class="list" class:grid-view={gridView}>
       {#if viewMode === 'artists'}
-        {#each filteredArtists as artist (artist.id)}
+        {#each sortedArtists as artist (artist.id)}
           <button
             class="list-item"
             onclick={() => navigate(`/library/artist/${encodeURIComponent(artist.name)}`)}
           >
+            {#if gridView}
+              <div class="card-icon">{artist.name.charAt(0).toUpperCase()}</div>
+            {/if}
             <span class="item-text">{artist.name}</span>
-            <span class="item-sub">{artist.trackCount} tracks</span>
+            <span class="item-sub">{artist.trackCount} track{artist.trackCount !== 1 ? 's' : ''}</span>
           </button>
         {/each}
-        {#if filteredArtists.length === 0 && searchQuery}
+        {#if sortedArtists.length === 0 && searchQuery}
           <p class="empty-search">No artists match your search.</p>
         {/if}
       {:else if viewMode === 'albums'}
-        {#each filteredAlbums as album (album.id)}
+        {#each sortedAlbums as album (album.id)}
           <button
             class="list-item"
             onclick={() => navigate(`/library/album/${encodeURIComponent(album.name)}?artist=${encodeURIComponent(album.artist)}`)}
           >
+            {#if gridView}
+              <div class="card-icon">💿</div>
+            {/if}
             <span class="item-text">{album.name}</span>
             <span class="item-sub">{album.artist}</span>
           </button>
         {/each}
-        {#if filteredAlbums.length === 0 && searchQuery}
+        {#if sortedAlbums.length === 0 && searchQuery}
           <p class="empty-search">No albums match your search.</p>
         {/if}
       {:else}
-        {#each filteredGenres as genre (genre)}
+        {#each sortedGenres as genre (genre)}
           <button class="list-item">
+            {#if gridView}
+              <div class="card-icon">🎵</div>
+            {/if}
             <span class="item-text">{genre}</span>
             <span class="item-sub">{tracks.filter(t => t.genre === genre).length} tracks</span>
           </button>
         {/each}
-        {#if filteredGenres.length === 0 && searchQuery}
+        {#if sortedGenres.length === 0 && searchQuery}
           <p class="empty-search">No genres match your search.</p>
         {/if}
       {/if}
@@ -166,6 +209,29 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .icon-btn {
+    background: none;
+    border: 1px solid var(--border-color, rgba(99, 110, 114, 0.3));
+    border-radius: 6px;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+  }
+
+  .icon-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
   }
 
   h1 {
@@ -291,5 +357,61 @@
     text-align: center;
     padding: 2rem;
     color: var(--text-muted);
+  }
+
+  /* Grid view */
+  .list.grid-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.75rem;
+    align-content: start;
+  }
+
+  .list.grid-view .list-item {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color, rgba(99, 110, 114, 0.15));
+    border-bottom: 1px solid var(--border-color, rgba(99, 110, 114, 0.15));
+    border-radius: 12px;
+    padding: 1rem 0.75rem;
+    height: auto;
+    min-height: 110px;
+    text-align: center;
+    gap: 0.35rem;
+    background-color: var(--bg-surface);
+  }
+
+  .list.grid-view .list-item:hover {
+    background-color: rgba(108, 92, 231, 0.12);
+  }
+
+  .list.grid-view .item-text {
+    font-size: 0.85rem;
+    overflow: auto;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+  }
+
+  .list.grid-view .item-sub {
+    font-size: 0.75rem;
+  }
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+    margin-bottom: 0.15rem;
   }
 </style>

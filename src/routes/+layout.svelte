@@ -4,6 +4,7 @@
   import { getThemeColors } from '$lib/theme/theme';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
+  import { goto } from '$app/navigation';
   import type { Snippet } from 'svelte';
   import MiniPlayer from '$lib/components/MiniPlayer.svelte';
   import '../app.css';
@@ -38,13 +39,14 @@
   ];
 
   function handleNav(href: string) {
-    window.location.href = href;
+    goto(href);
   }
 </script>
 
 <div
   class="app-shell"
   style="
+    --bg: {colors.background};
     --accent: {colors.accent};
     --text: {colors.text};
     --text-secondary: {colors.textSecondary};
@@ -54,7 +56,7 @@
     font-size: {config.fontSize === 'small' ? '14px' : config.fontSize === 'large' ? '18px' : '16px'};
   "
 >
-  <nav class="sidebar overflow-hidden">
+  <nav class="sidebar">
     <div class="sidebar-header">
       <span class="text-2xl drop-shadow-[0_0_8px_var(--accent)]">🎵</span>
       <span class="font-bold text-[var(--text)]">Sovereign</span>
@@ -71,20 +73,21 @@
     {/each}
   </nav>
 
-  <main class="content">
+  <main class="content" style="background-color: var(--bg);">
     {#if children}
       {@render children()}
     {/if}
   </main>
 
   <MiniPlayer />
+
 </div>
 
 <style>
   .app-shell {
     display: flex;
     height: 100vh;
-    overflow: hidden;
+    overflow: auto;
     background-color: var(--bg);
     color: var(--text);
   }

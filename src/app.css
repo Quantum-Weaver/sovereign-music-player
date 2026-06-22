@@ -62,7 +62,7 @@ body {
   color: var(--text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.6;
-  overflow: hidden;
+  overflow: auto;
   height: 100%;
 }
 

@@ -181,7 +181,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
-    overflow: hidden;
+    overflow: auto;
   }
 
   .track-title {
@@ -189,7 +189,7 @@
     font-weight: 500;
     color: var(--text);
     white-space: nowrap;
-    overflow: hidden;
+    overflow: auto;
     text-overflow: ellipsis;
   }
 
@@ -197,7 +197,7 @@
     font-size: 0.8rem;
     color: var(--text-secondary);
     white-space: nowrap;
-    overflow: hidden;
+    overflow: auto;
     text-overflow: ellipsis;
   }
 

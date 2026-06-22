@@ -47,18 +47,19 @@ export const PRESET_THEMES: Record<string, ThemeConfig> = {
 };
 
 export const getThemeColors = (config: ThemeConfig) => {
-  const isDark = config.mode !== 'light';
-  
+  const isLight = config.mode === 'light';
+  const isAmoled = config.mode === 'amoled';
+
   return {
-    background: config.mode === 'amoled' ? '#000000' : QUANTUM_COLORS['deepSpace'],
-    surface: config.mode === 'amoled' ? '#0a0a0a' : QUANTUM_COLORS['surface'],
-    surfaceLight: config.mode === 'amoled' ? '#111111' : '#2a2a5a',
+    background: isAmoled ? '#000000' : isLight ? '#f5f5f5' : QUANTUM_COLORS['deepSpace'],
+    surface: isAmoled ? '#0a0a0a' : isLight ? '#ffffff' : QUANTUM_COLORS['surface'],
+    surfaceLight: isAmoled ? '#111111' : isLight ? '#e8e8e8' : '#2a2a5a',
     accent: config.accentColor,
     accentPulse: config.accentColor + 'CC',
-    text: QUANTUM_COLORS['starDust'],
-    textSecondary: '#999999',
-    textMuted: '#666666',
-    border: 'rgba(99, 110, 114, 0.3)',
+    text: isLight ? '#1a1a1a' : QUANTUM_COLORS['starDust'],
+    textSecondary: isLight ? '#555555' : '#999999',
+    textMuted: isLight ? '#888888' : '#666666',
+    border: isLight ? 'rgba(0, 0, 0, 0.12)' : 'rgba(99, 110, 114, 0.3)',
     heart: QUANTUM_COLORS['error'],
     success: QUANTUM_COLORS['success'],
     warning: QUANTUM_COLORS['warning'],

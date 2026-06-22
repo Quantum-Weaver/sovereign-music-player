@@ -4,12 +4,13 @@
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
   import { page } from '$app/state';
+  import { goto } from '$app/navigation';
 
   const artistName = decodeURIComponent(page.params.id || "undefined");
   const colors = $derived(getThemeColors(themeStore.config));
   const tracks = $derived(libraryStore.tracks);
   
-  const artistTracks = $derived(tracks.filter(t => t.artist === artistName));
+  const artistTracks = $derived(tracks.filter(t => t.artist.trim().toLowerCase() === artistName.toLowerCase()));
   
   const albums = $derived(
     (() => {
@@ -36,7 +37,7 @@
   function playAll() {
     if (artistTracks.length > 0) {
       playerStore.loadQueue(artistTracks);
-      window.location.href = '/nowplaying';
+      goto('/nowplaying');
     }
   }
 
