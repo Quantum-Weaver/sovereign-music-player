@@ -24,7 +24,9 @@ pub struct TrackInfo {
     #[serde(rename = "trackNumber")]
     pub track_number: Option<u32>,
     pub duration: f64,
+    #[serde(rename = "coverArt")]
     pub cover_art: Option<String>,
+    #[serde(rename = "dateAdded")]
     pub date_added: u64,
 }
 

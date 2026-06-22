@@ -149,5 +149,6 @@
     flex: 1;
     overflow-y: auto;
     background-color: var(--bg);
+    padding-bottom: 60px;
   }
 </style>

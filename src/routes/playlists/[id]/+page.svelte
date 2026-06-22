@@ -5,6 +5,7 @@
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
   import { page } from '$app/state';
+  import { goto } from '$app/navigation';
 
   const playlistId = page.params.id || '';
   const colors = $derived(getThemeColors(themeStore.config));
@@ -26,13 +27,13 @@
   function playAll() {
     if (tracks.length > 0) {
       playerStore.loadQueue(tracks);
-      window.location.href = '/nowplaying';
+      goto('/nowplaying');
     }
   }
 
   function playTrack(index: number) {
     playerStore.loadQueue(tracks, index);
-    window.location.href = '/nowplaying';
+    goto('/nowplaying');
   }
 
   function goBack() {

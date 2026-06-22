@@ -74,7 +74,7 @@
     {#each albums as album (album.id)}
       <button
         class="album-item"
-        onclick={() => window.location.href = `/library/album/${encodeURIComponent(album.name)}?artist=${encodeURIComponent(artistName)}`}
+        onclick={() => goto(`/library/album/${encodeURIComponent(album.name)}?artist=${encodeURIComponent(artistName)}`)}
       >
         <div class="album-art-thumb">
           <span>💿</span>

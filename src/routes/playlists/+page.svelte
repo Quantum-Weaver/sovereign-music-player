@@ -2,6 +2,7 @@
   import { playlistStore } from '$lib/stores/playlist.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
+  import { goto } from '$app/navigation';
 
   const colors = $derived(getThemeColors(themeStore.config));
   const playlists = $derived(playlistStore.playlists);
@@ -14,7 +15,7 @@
       const id = playlistStore.createPlaylist(newName.trim());
       newName = '';
       showCreate = false;
-      window.location.href = `/playlists/${id}`;
+      goto(`/playlists/${id}`);
     }
   }
 
@@ -53,7 +54,7 @@
     <div class="playlist-list">
       {#each playlists as playlist (playlist.id)}
         <div class="playlist-item">
-          <button class="playlist-click" onclick={() => window.location.href = `/playlists/${playlist.id}`}>
+          <button class="playlist-click" onclick={() => goto(`/playlists/${playlist.id}`)}>
             <div class="playlist-icon">
               <span>🎵</span>
             </div>

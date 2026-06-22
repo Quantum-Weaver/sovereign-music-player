@@ -28,6 +28,7 @@
   const currentTrack = $derived(playerStore.currentTrack);
 
   let activeMenu = $state<string | null>(null);
+  let albumMenuOpen = $state(false);
 
   function formatDuration(seconds: number): string {
     if (!seconds || seconds <= 0) return '--:--';
@@ -61,10 +62,17 @@
     playlistStore.addTrack(playlistId, trackId);
     activeMenu = null;
   }
+
+  function addAlbumToPlaylist(playlistId: string) {
+    for (const track of albumTracks) {
+      playlistStore.addTrack(playlistId, track.id);
+    }
+    albumMenuOpen = false;
+  }
 </script>
 
-{#if activeMenu}
-  <button class="backdrop" onclick={() => activeMenu = null} aria-label="Close menu"></button>
+{#if activeMenu || albumMenuOpen}
+  <button class="backdrop" onclick={() => { activeMenu = null; albumMenuOpen = false; }} aria-label="Close menu"></button>
 {/if}
 
 <div
@@ -82,7 +90,11 @@
 
   <div class="hero">
     <div class="album-art">
-      <span>💿</span>
+      {#if album?.coverArt}
+        <img src={album.coverArt} alt="Album art" class="art-img" />
+      {:else}
+        <span>💿</span>
+      {/if}
     </div>
     <h1>{albumName}</h1>
     <p class="artist-name">{artistName}</p>
@@ -91,7 +103,24 @@
       {album?.year ? ` · ${album.year}` : ''}
       {album?.genre ? ` · ${album.genre}` : ''}
     </p>
-    <button class="play-btn" onclick={playAll}>▶ Play Album</button>
+    <div class="hero-actions">
+      <button class="play-btn" onclick={playAll}>▶ Play Album</button>
+      <div class="album-menu-wrap">
+        <button class="playlist-btn" onclick={() => albumMenuOpen = !albumMenuOpen}>⊕ Add to Playlist</button>
+        {#if albumMenuOpen}
+          <div class="playlist-dropdown album-dropdown">
+            <p class="dropdown-label">Add all tracks to</p>
+            {#if playlists.length === 0}
+              <p class="dropdown-empty">No playlists yet</p>
+            {:else}
+              {#each playlists as pl (pl.id)}
+                <button class="dropdown-item" onclick={() => addAlbumToPlaylist(pl.id)}>{pl.name}</button>
+              {/each}
+            {/if}
+          </div>
+        {/if}
+      </div>
+    </div>
   </div>
 
   <div class="track-list">
@@ -178,6 +207,13 @@
     color: white;
     background-color: var(--accent);
     margin-bottom: 1rem;
+    overflow: hidden;
+  }
+
+  .art-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   h1 {
@@ -195,6 +231,17 @@
     font-size: 0.85rem;
   }
 
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .album-menu-wrap {
+    position: relative;
+  }
+
   .play-btn {
     color: white;
     border: none;
@@ -202,12 +249,35 @@
     border-radius: 20px;
     font-weight: 600;
     cursor: pointer;
-    margin-top: 0.5rem;
     background-color: var(--accent);
     transition: filter 0.15s;
   }
 
   .play-btn:hover { filter: brightness(1.1); }
+
+  .playlist-btn {
+    background: none;
+    border: 1px solid var(--accent);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--accent);
+    font-size: 0.9rem;
+    transition: background-color 0.15s;
+    white-space: nowrap;
+  }
+
+  .playlist-btn:hover {
+    background-color: rgba(108, 92, 231, 0.1);
+  }
+
+  .album-dropdown {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    top: calc(100% + 0.5rem);
+  }
 
   .track-list {
     flex: 1;

@@ -1,6 +1,13 @@
 <script lang="ts">
   import { themeStore } from '$lib/stores/theme.svelte';
+  import { libraryStore } from '$lib/stores/library.svelte';
   import { getThemeColors, PRESET_THEMES } from '$lib/theme/theme';
+
+  async function clearLibrary() {
+    if (confirm('Delete all tracks from your library? Rescan your folders to rebuild it.')) {
+      await libraryStore.clearLibrary();
+    }
+  }
 
   const colors = $derived(getThemeColors(themeStore.config));
   const config = $derived(themeStore.config);
@@ -100,6 +107,11 @@
         </button>
       {/each}
     </div>
+
+    <!-- Library Data -->
+    <h3>LIBRARY DATA</h3>
+    <button class="danger-btn" onclick={clearLibrary}>Clear Library</button>
+    <p class="danger-desc">Removes all tracks from the database. Rescan your folders to rebuild.</p>
 
     <!-- App Info -->
     <p class="app-info">
@@ -216,6 +228,28 @@
     background-color: var(--accent);
     color: #fff;
     border-color: var(--accent);
+  }
+
+  .danger-btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    border: 1px solid #e17055;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: transparent;
+    color: #e17055;
+    transition: background-color 0.15s;
+  }
+
+  .danger-btn:hover {
+    background-color: rgba(225, 112, 85, 0.12);
+  }
+
+  .danger-desc {
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
   }
 
   /* App Info */

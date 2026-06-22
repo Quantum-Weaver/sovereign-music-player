@@ -155,6 +155,15 @@ export const libraryStore = {
     lastScanned = Date.now();
   },
 
+  async clearLibrary() {
+    if (!db) return;
+    await db.execute('DELETE FROM songs');
+    tracks = [];
+    albums = [];
+    artists = [];
+    lastScanned = null;
+  },
+
   setScanning(scanning: boolean) { isScanning = scanning; },
   setScanProgress(progress: number) { scanProgress = progress; },
 

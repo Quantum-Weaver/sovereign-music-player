@@ -2,23 +2,14 @@
   import { playerStore } from '$lib/stores/player.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
+  import PlayerControls from '$lib/components/PlayerControls.svelte';
+  import { goto } from '$app/navigation';
 
   const colors = $derived(getThemeColors(themeStore.config));
   const currentTrack = $derived(playerStore.currentTrack);
-  const isPlaying = $derived(playerStore.isPlaying);
-  const position = $derived(playerStore.position);
-  const duration = $derived(playerStore.duration);
   const shuffle = $derived(playerStore.shuffle);
   const repeat = $derived(playerStore.repeat);
-
-  const progress = $derived(duration > 0 ? position / duration : 0);
   const repeatIcon = $derived(repeat === 'one' ? '🔂' : repeat === 'all' ? '🔁' : '➡️');
-
-  function formatTime(secs: number): string {
-    if (!secs || secs <= 0) return '0:00';
-    const s = Math.floor(secs);
-    return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
-  }
 
   function goBack() {
     window.history.back();
@@ -44,12 +35,16 @@
   {:else}
     <div class="header">
       <button class="back-btn" onclick={goBack}>← Library</button>
-      <button class="queue-link" onclick={() => window.location.href = '/queue'}>Queue</button>
+      <button class="queue-link" onclick={() => goto('/queue')}>Queue</button>
     </div>
 
     <div class="art-container">
       <div class="album-art">
-        <span>💿</span>
+        {#if currentTrack.coverArt}
+          <img src={currentTrack.coverArt} alt="Album art" class="art-img" />
+        {:else}
+          <span>💿</span>
+        {/if}
       </div>
     </div>
 
@@ -59,29 +54,20 @@
       <p class="album">{currentTrack.album}</p>
     </div>
 
-    <div class="progress-container">
-      <span class="time">{formatTime(position)}</span>
-      <div class="progress-bar">
-        <div class="progress-fill" style="width: {progress * 100}%;"></div>
-      </div>
-      <span class="time">{formatTime(duration)}</span>
-    </div>
+    <PlayerControls />
 
-    <div class="controls">
+    <div class="extra-controls">
       <button
         class="ctrl-btn"
         class:active={shuffle}
         onclick={playerStore.toggleShuffle}
+        aria-label="Shuffle"
       >🔀</button>
-      <button class="ctrl-btn" onclick={playerStore.previous}>⏮</button>
-      <button class="play-pause" onclick={playerStore.togglePlay}>
-        <span>{isPlaying ? '⏸' : '▶️'}</span>
-      </button>
-      <button class="ctrl-btn" onclick={playerStore.next}>⏭</button>
       <button
         class="ctrl-btn"
         class:active={repeat !== 'off'}
         onclick={playerStore.toggleRepeat}
+        aria-label="Repeat"
       >{repeatIcon}</button>
     </div>
   {/if}
@@ -142,6 +128,13 @@
     color: white;
     background-color: var(--accent);
     box-shadow: 0 0 60px color-mix(in srgb, var(--accent) 20%, transparent);
+    overflow: hidden;
+  }
+
+  .art-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .track-info {
@@ -167,50 +160,21 @@
     margin: 0.15rem 0;
   }
 
-  .progress-container {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
-  }
-
-  .time {
-    font-size: 0.75rem;
-    width: 2.5rem;
-    text-align: center;
-    color: var(--text-muted);
-  }
-
-  .progress-bar {
-    flex: 1;
-    height: 4px;
-    border-radius: 2px;
-    cursor: pointer;
-    background-color: var(--bg-surface-light);
-  }
-
-  .progress-fill {
-    height: 100%;
-    border-radius: 2px;
-    background-color: var(--accent);
-    transition: width 0.3s ease;
-  }
-
-  .controls {
+  .extra-controls {
     display: flex;
     justify-content: center;
-    align-items: center;
-    gap: 1.25rem;
+    gap: 2rem;
+    margin-top: 0.75rem;
   }
 
   .ctrl-btn {
     background: none;
     border: none;
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     cursor: pointer;
     padding: 0.25rem;
     color: var(--text-secondary);
-    transition: transform 0.15s;
+    transition: transform 0.15s, color 0.15s;
   }
 
   .ctrl-btn:hover {
@@ -219,24 +183,5 @@
 
   .ctrl-btn.active {
     color: var(--accent);
-  }
-
-  .play-pause {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 1.8rem;
-    color: white;
-    background-color: var(--accent);
-    transition: transform 0.15s;
-  }
-
-  .play-pause:hover {
-    transform: scale(1.05);
   }
 </style>

@@ -125,6 +125,8 @@
       <button
         class="toggle {fadeOut ? 'active' : ''}"
         onclick={() => fadeOut = !fadeOut}
+        aria-label="Enable fade out"
+        aria-pressed={fadeOut}
       >
         <span class="dot"></span>
       </button>

@@ -3,10 +3,10 @@
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
   import { goto } from '$app/navigation';
+  import PlayerControls from '$lib/components/PlayerControls.svelte';
 
   const colors = $derived(getThemeColors(themeStore.config));
   const currentTrack = $derived(playerStore.currentTrack);
-  const isPlaying = $derived(playerStore.isPlaying);
 </script>
 
 {#if currentTrack}
@@ -18,28 +18,37 @@
       --mini-text: {colors.text};
       --mini-text-secondary: {colors.textSecondary};
       --mini-border: {colors.border};
+      --accent: {colors.accent};
+      --text: {colors.text};
+      --text-secondary: {colors.textSecondary};
+      --text-muted: {colors.textMuted};
+      --bg-surface-light: {colors.surfaceLight};
     "
   >
     <button class="mini-click" onclick={() => goto('/nowplaying')}>
       <div class="artwork">
-        <span>💿</span>
+        {#if currentTrack?.coverArt}
+          <img src={currentTrack.coverArt} alt="" class="art-img" />
+        {:else}
+          <span>💿</span>
+        {/if}
       </div>
       <div class="info">
         <span class="title">{currentTrack.title}</span>
         <span class="artist">{currentTrack.artist}</span>
       </div>
     </button>
-    <button class="ctrl-btn" onclick={(e) => { e.stopPropagation(); playerStore.togglePlay(); }}>
-      <span>{isPlaying ? '⏸' : '▶️'}</span>
-    </button>
-    <button class="ctrl-btn" onclick={(e) => { e.stopPropagation(); playerStore.next(); }}>
-      <span>⏭</span>
-    </button>
+    <PlayerControls mini />
   </div>
 {/if}
 
 <style>
   .mini-player {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
     display: flex;
     align-items: center;
     padding: 0.5rem 0.75rem;
@@ -74,6 +83,13 @@
     font-size: 1rem;
     flex-shrink: 0;
     background-color: var(--mini-accent);
+    overflow: hidden;
+  }
+
+  .art-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .info {
@@ -100,17 +116,4 @@
     color: var(--mini-text-secondary);
   }
 
-  .ctrl-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.3rem;
-    padding: 0.25rem 0.5rem;
-    transition: transform 0.1s;
-    color: var(--mini-text);
-  }
-
-  .ctrl-btn:hover {
-    transform: scale(1.15);
-  }
 </style>
