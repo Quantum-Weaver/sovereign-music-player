@@ -171,8 +171,22 @@ export const playerStore = {
 // Tauri audio event listeners (wired once for the lifetime of the app)
 // ---------------------------------------------------------------------------
 if (browser) {
+  // Throttle frequent position events to avoid driving global reactivity
+  // (position updates arrive ~500ms from the Rust audio thread).
+  // Only update the exported `position` when the value changes meaningfully
+  // or when a minimum time has elapsed to keep UI reasonably in sync.
+  let _lastPosUpdate = 0;
+  let _lastPos = 0;
   listen<number>('audio://position', (event) => {
-    position = event.payload;
+    const now = Date.now();
+    const p = event.payload;
+    const diff = Math.abs(p - _lastPos);
+    // update if the position changed by >350ms, or it's been >800ms since last assignment
+    if (diff > 0.35 || now - _lastPosUpdate > 800) {
+      position = p;
+      _lastPos = p;
+      _lastPosUpdate = now;
+    }
   });
 
   listen<number>('audio://duration', (event) => {
