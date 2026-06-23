@@ -1,102 +1,263 @@
 <script lang="ts">
   import { libraryStore } from '$lib/stores/library.svelte';
+  import { playerStore } from '$lib/stores/player.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
-
-  let searchQuery = $state('');
-  let viewMode = $state<'artists' | 'albums' | 'genres'>('artists');
+  import AlbumCard from '$lib/components/AlbumCard.svelte';
+  import GradientPulse from '$lib/components/GradientPulse.svelte';
+  import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
+  import type { Album } from '$lib/types/types';
 
   const colors = $derived(getThemeColors(themeStore.config));
   const tracks = $derived(libraryStore.tracks);
-  const isScanning = $derived(libraryStore.isScanning);
-  const scanProgress = $derived(libraryStore.scanProgress);
 
-  const artists = $derived(libraryStore.artists);
-  const albums = $derived(libraryStore.albums);
-  const genres = $derived<string[]>([...new Set(tracks.map(t => t.genre).filter((g): g is string => g !== undefined && g !== null))]);
+  let recentAlbumIds = $state<string[]>([]);
 
-  const filteredArtists = $derived(
-    searchQuery
-      ? artists.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()))
-      : artists
+  onMount(() => {
+    try {
+      const stored = localStorage.getItem('recent_albums');
+      if (stored) recentAlbumIds = JSON.parse(stored);
+    } catch {}
+  });
+
+  $effect(() => {
+    const track = playerStore.currentTrack;
+    if (!track) return;
+    const albumId = `${track.album.trim()}|||${track.artist.trim()}`;
+    const updated = [albumId, ...recentAlbumIds.filter(id => id !== albumId)].slice(0, 20);
+    recentAlbumIds = updated;
+    try { localStorage.setItem('recent_albums', JSON.stringify(updated)); } catch {}
+  });
+
+  const recentAlbums = $derived(
+    recentAlbumIds
+      .map(id => libraryStore.albums.find(a => a.id === id))
+      .filter((a): a is Album => a !== undefined)
+      .slice(0, 8)
   );
 
-  const filteredAlbums = $derived(
-    searchQuery
-      ? albums.filter(a =>
-          a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          a.artist.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      : albums
+  const favoriteAlbums = $derived(
+    (() => {
+      const seen = new Set<string>();
+      const result: Album[] = [];
+      for (const trackId of libraryStore.favoriteTrackIds) {
+        const track = libraryStore.getTrackById(trackId);
+        if (!track) continue;
+        const albumId = `${track.album.trim()}|||${track.artist.trim()}`;
+        if (seen.has(albumId)) continue;
+        seen.add(albumId);
+        const album = libraryStore.albums.find(a => a.id === albumId);
+        if (album) result.push(album);
+      }
+      return result.slice(0, 8);
+    })()
   );
 
-  const filteredGenres = $derived(
-    searchQuery
-      ? genres.filter(g => g.toLowerCase().includes(searchQuery.toLowerCase()))
-      : genres
-  );
-
-  function scanLibrary() {
-    // Will wire to Rust backend in Phase 6
-    console.log('Scan requested');
+  function getGreeting(): string {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 
-  function navigate(path: string) {
-    window.location.href = path;
+  function getInsight(): string {
+    const fav = libraryStore.favoriteTrackIds.size;
+    const total = tracks.length;
+    if (total === 0) return 'Your sanctuary awaits. Head to Library to scan your music.';
+    if (fav > 0) return `${fav} track${fav !== 1 ? 's' : ''} in your favorites. ${total} in your library.`;
+    return `${total} track${total !== 1 ? 's' : ''} in your library. Heart the ones that matter.`;
+  }
+
+  function navigateAlbum(album: Album) {
+    goto(`/library/album/${encodeURIComponent(album.name)}?artist=${encodeURIComponent(album.artist)}`);
+  }
+
+  function resume() {
+    if (playerStore.currentTrack) {
+      playerStore.play();
+      goto('/nowplaying');
+    }
   }
 </script>
 
-<div class="library-page">
-  <div class="header">
-    <h1 style="color: var(--text);">Library</h1>
-    <button class="scan-btn" style="background-color: var(--accent);">
-      Scan Library
+<div class="home-page">
+  <!-- Greeting with ambient glow -->
+  <div class="greeting-wrap">
+    <GradientPulse color={colors.accent} pulse={playerStore.isPlaying}>
+      <div class="greeting-inner">
+        <h1 class="stardust-text">{getGreeting()}</h1>
+      </div>
+    </GradientPulse>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions">
+    <button
+      class="action-btn primary"
+      onclick={resume}
+      disabled={!playerStore.currentTrack}
+    >
+      ▶ Resume
+    </button>
+    <button class="action-btn" onclick={() => goto('/playlists')}>
+      🧘 Comfort Zone
     </button>
   </div>
-  <div class="placeholder" style="color: var(--text-secondary);">
-    <span style="font-size: 4rem;">🎵</span>
-    <p>Your music library will appear here</p>
-  </div>
+
+  <!-- Insight line -->
+  <p class="insight">{getInsight()}</p>
+
+  <!-- Recently Played -->
+  {#if recentAlbums.length > 0}
+    <section class="section">
+      <h3 class="section-title">Recently Played</h3>
+      <div class="h-scroll">
+        {#each recentAlbums as album (album.id)}
+          <div class="h-card">
+            <AlbumCard {album} size="small" onClick={() => navigateAlbum(album)} />
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+
+  <!-- Favorites albums -->
+  {#if favoriteAlbums.length > 0}
+    <section class="section">
+      <h3 class="section-title">Your Favorites</h3>
+      <div class="h-scroll">
+        {#each favoriteAlbums as album (album.id)}
+          <div class="h-card">
+            <AlbumCard {album} size="small" onClick={() => navigateAlbum(album)} />
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+
+  <!-- Empty state when no library -->
+  {#if tracks.length === 0}
+    <div class="empty-state">
+      <span class="empty-icon">🎵</span>
+      <p class="empty-text">No music yet.</p>
+      <button class="action-btn" onclick={() => goto('/library')}>Open Library</button>
+    </div>
+  {/if}
 </div>
 
 <style>
-  .library-page {
+  .home-page {
     padding: 2rem;
     height: 100%;
     display: flex;
     flex-direction: column;
+    gap: 1.5rem;
+    overflow-y: auto;
+    background-color: var(--bg);
+    color: var(--text);
   }
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
+
+  .greeting-wrap {
+    position: relative;
+    padding: 1.5rem 0 0.5rem;
   }
-  h1 {
-    font-size: 1.75rem;
+
+  .greeting-inner {
+    position: relative;
+    z-index: 1;
+  }
+
+  h1.stardust-text {
+    font-size: 2rem;
     font-weight: 700;
   }
-  .scan-btn {
-    color: white;
-    border: none;
-    padding: 0.5rem 1.5rem;
-    border-radius: 8px;
+
+  .quick-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    padding: 0.6rem 1.4rem;
+    border-radius: 22px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text);
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 0 20px rgba(108, 92, 231, 0.2);
+    transition: all 0.2s;
   }
-  .scan-btn:hover {
-    box-shadow: 0 0 30px rgba(108, 92, 231, 0.4);
-    transform: translateY(-1px);
+
+  .action-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 25%, transparent);
   }
-  .placeholder {
+
+  .action-btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .action-btn.primary:hover:not(:disabled) {
+    filter: brightness(1.1);
+    color: white;
+    box-shadow: none;
+  }
+
+  .action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .insight {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.01em;
+  }
+
+  .h-scroll {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    scrollbar-width: thin;
+  }
+
+  .h-card {
+    flex-shrink: 0;
+    width: 140px;
+  }
+
+  .empty-state {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
-    font-size: 1.1rem;
+    gap: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
   }
+
+  .empty-icon { font-size: 3rem; }
+  .empty-text { font-size: 0.9rem; }
 </style>

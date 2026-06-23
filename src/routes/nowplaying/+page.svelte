@@ -1,26 +1,28 @@
 <script lang="ts">
   import { playerStore } from '$lib/stores/player.svelte';
+  import { libraryStore } from '$lib/stores/library.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
+  import PlayerControls from '$lib/components/PlayerControls.svelte';
+  import GradientPulse from '$lib/components/GradientPulse.svelte';
+  import { goto } from '$app/navigation';
+  import EmojiPalette from '$lib/components/EmojiPalette.svelte';
 
   const colors = $derived(getThemeColors(themeStore.config));
   const currentTrack = $derived(playerStore.currentTrack);
   const isPlaying = $derived(playerStore.isPlaying);
-  const position = $derived(playerStore.position);
-  const duration = $derived(playerStore.duration);
   const shuffle = $derived(playerStore.shuffle);
   const repeat = $derived(playerStore.repeat);
-  const volume = $derived(playerStore.volume);
-
-  const progress = $derived(duration > 0 ? position / duration : 0);
   const repeatIcon = $derived(repeat === 'one' ? '🔂' : repeat === 'all' ? '🔁' : '➡️');
+  const isFav = $derived(currentTrack ? libraryStore.isFavorite(currentTrack.id) : false);
 
-  function formatTime(ms: number): string {
-    if (!ms || ms <= 0) return '0:00';
-    const totalSec = Math.floor(ms / 1000);
-    const mins = Math.floor(totalSec / 60);
-    const secs = totalSec % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  let heartAnimating = $state(false);
+
+  function toggleFav() {
+    if (!currentTrack) return;
+    heartAnimating = true;
+    setTimeout(() => { heartAnimating = false; }, 400);
+    libraryStore.toggleFavorite(currentTrack.id);
   }
 
   function goBack() {
@@ -28,48 +30,78 @@
   }
 </script>
 
-<div class="nowplaying-page" style="background-color: {colors.background};">
+<div
+  class="nowplaying-page"
+  style="
+    --accent: {colors.accent};
+    --text: {colors.text};
+    --text-secondary: {colors.textSecondary};
+    --text-muted: {colors.textMuted};
+    --bg-surface-light: {colors.surfaceLight};
+  "
+>
   {#if !currentTrack}
-    <button class="back-btn" style="color: {colors.accent};" onclick={goBack}>← Library</button>
+    <button class="back-btn" onclick={goBack}>← Library</button>
     <div class="empty-state">
-      <span style="font-size: 4rem;">🎵</span>
-      <p style="color: {colors.textSecondary};">Select a track to play</p>
+      <span class="text-6xl drop-shadow-[0_0_12px_var(--accent)]">🎵</span>
+      <p>Select a track to play</p>
     </div>
   {:else}
     <div class="header">
-      <button class="back-btn" style="color: {colors.accent};" onclick={goBack}>← Library</button>
-      <button class="queue-link" style="color: {colors.accent};" onclick={() => window.location.href = '/queue'}>Queue</button>
+      <button class="back-btn" onclick={goBack}>← Library</button>
+      <button class="queue-link" onclick={() => goto('/queue')}>Queue</button>
     </div>
 
+    <!-- DIAGNOSTIC: remove before ship -->
+    <pre style="font-size:9px;color:lime;background:#000;padding:4px;word-break:break-all;white-space:pre-wrap;max-height:60px;overflow:hidden">coverArt type={typeof currentTrack.coverArt} | value={currentTrack.coverArt ? currentTrack.coverArt.substring(0, 80) + '…' : 'MISSING'}</pre>
+
     <div class="art-container">
-      <div class="album-art" style="background-color: {colors.accent}; box-shadow: 0 0 60px {colors.accent}30;">
-        <span>💿</span>
+      <div class="glow-wrap">
+        <GradientPulse color={colors.accent} pulse={isPlaying}>
+          <div class="album-art">
+            {#if currentTrack.coverArt}
+              <img src={currentTrack.coverArt} alt="Album art" class="art-img" />
+            {:else}
+              <span>💿</span>
+            {/if}
+          </div>
+        </GradientPulse>
       </div>
     </div>
 
     <div class="track-info">
-      <h2 style="color: {colors.text};">{currentTrack.title}</h2>
-      <p style="color: {colors.textSecondary};">{currentTrack.artist}</p>
-      <p style="color: {colors.textMuted}; font-size: 0.85rem;">{currentTrack.album}</p>
-    </div>
-
-    <div class="progress-container">
-      <span class="time" style="color: {colors.textMuted};">{formatTime(position)}</span>
-      <div class="progress-bar" style="background-color: {colors.surfaceLight};">
-        <div class="progress-fill" style="background-color: {colors.accent}; width: {progress * 100}%;"></div>
+      <div class="title-row">
+        <h2>{currentTrack.title}</h2>
+        <button
+          class="heart-btn"
+          class:fav={isFav}
+          class:pop={heartAnimating}
+          onclick={toggleFav}
+          aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+          aria-pressed={isFav}
+        >{isFav ? '❤️' : '🤍'}</button>
       </div>
-      <span class="time" style="color: {colors.textMuted};">{formatTime(duration)}</span>
+      <p class="artist">{currentTrack.artist}</p>
+      <p class="album">{currentTrack.album}</p>
     </div>
 
-    <div class="controls">
-      <button class="ctrl-btn" style="color: {shuffle ? colors.accent : colors.textSecondary};" onclick={playerStore.toggleShuffle}>🔀</button>
-      <button class="ctrl-btn" style="color: {colors.text};" onclick={playerStore.previous}>⏮</button>
-      <button class="play-pause" style="background-color: {colors.accent};" onclick={playerStore.togglePlay}>
-        <span>{isPlaying ? '⏸' : '▶️'}</span>
-      </button>
-      <button class="ctrl-btn" style="color: {colors.text};" onclick={playerStore.next}>⏭</button>
-      <button class="ctrl-btn" style="color: {repeat !== 'off' ? colors.accent : colors.textSecondary};" onclick={playerStore.toggleRepeat}>{repeatIcon}</button>
+    <PlayerControls />
+
+    <div class="extra-controls">
+      <button
+        class="ctrl-btn"
+        class:active={shuffle}
+        onclick={playerStore.toggleShuffle}
+        aria-label="Shuffle"
+      >🔀</button>
+      <button
+        class="ctrl-btn"
+        class:active={repeat !== 'off'}
+        onclick={playerStore.toggleRepeat}
+        aria-label="Repeat"
+      >{repeatIcon}</button>
     </div>
+    <EmojiPalette />
   {/if}
 </div>
 
@@ -79,21 +111,28 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    background-color: var(--bg);
+    color: var(--text);
   }
+
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
   }
-  .back-btn, .queue-link {
+
+  .back-btn,
+  .queue-link {
     background: none;
     border: none;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     padding: 0;
+    color: var(--accent);
   }
+
   .empty-state {
     flex: 1;
     display: flex;
@@ -101,12 +140,21 @@
     align-items: center;
     justify-content: center;
     gap: 1rem;
+    color: var(--text-secondary);
   }
+
   .art-container {
     display: flex;
     justify-content: center;
     margin-bottom: 2rem;
   }
+
+  .glow-wrap {
+    position: relative;
+    width: 260px;
+    height: 260px;
+  }
+
   .album-art {
     width: 260px;
     height: 260px;
@@ -116,72 +164,83 @@
     justify-content: center;
     font-size: 4rem;
     color: white;
+    background-color: var(--accent);
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
   }
+
+  .art-img { width: 100%; height: 100%; object-fit: cover; }
+
   .track-info {
     text-align: center;
     margin-bottom: 1.5rem;
   }
+
+  .title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
   h2 {
     font-size: 1.35rem;
     font-weight: 700;
-    margin-bottom: 0.25rem;
+    color: var(--text);
+    margin: 0;
   }
-  p {
+
+  .heart-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.15rem;
+    font-size: 1.3rem;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+  }
+
+  .heart-btn:hover { transform: scale(1.25); }
+  .heart-btn.pop { animation: heartPop 0.35s ease-out; }
+
+  @keyframes heartPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.6); }
+    70%  { transform: scale(0.9); }
+    100% { transform: scale(1); }
+  }
+
+  .artist {
+    color: var(--text-secondary);
     margin: 0.15rem 0;
   }
-  .progress-container {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
+
+  .album {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0.15rem 0;
   }
-  .time {
-    font-size: 0.75rem;
-    width: 2.5rem;
-    text-align: center;
-  }
-  .progress-bar {
-    flex: 1;
-    height: 4px;
-    border-radius: 2px;
-    cursor: pointer;
-  }
-  .progress-fill {
-    height: 100%;
-    border-radius: 2px;
-    transition: width 0.3s ease;
-  }
-  .controls {
+
+  .extra-controls {
     display: flex;
     justify-content: center;
-    align-items: center;
-    gap: 1.25rem;
+    gap: 2rem;
+    margin-top: 0.75rem;
   }
+
   .ctrl-btn {
     background: none;
     border: none;
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     cursor: pointer;
     padding: 0.25rem;
-    transition: transform 0.15s;
+    color: var(--text-secondary);
+    transition: transform 0.15s, color 0.15s;
   }
-  .ctrl-btn:hover {
-    transform: scale(1.1);
-  }
-  .play-pause {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 1.8rem;
-    color: white;
-    transition: transform 0.15s;
-  }
-  .play-pause:hover {
-    transform: scale(1.05);
-  }
+
+  .ctrl-btn:hover { transform: scale(1.1); }
+  .ctrl-btn.active { color: var(--accent); }
 </style>
