@@ -1,18 +1,26 @@
 <script lang="ts">
   import { playerStore } from '$lib/stores/player.svelte';
   import { libraryStore } from '$lib/stores/library.svelte';
+  import { moodStore } from '$lib/stores/mood.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
+  import { EMOJI_DEFS } from '$lib/data/emojis';
   import { goto } from '$app/navigation';
   import { slide } from 'svelte/transition';
   import PlayerControls from '$lib/components/PlayerControls.svelte';
+  import EmojiGrid from '$lib/components/EmojiGrid.svelte';
 
   const colors = $derived(getThemeColors(themeStore.config));
   const currentTrack = $derived(playerStore.currentTrack);
   const volume = $derived(playerStore.volume);
+  const repeat = $derived(playerStore.repeat);
   const isFav = $derived(currentTrack ? libraryStore.isFavorite(currentTrack.id) : false);
   let expanded = $state(false);
   let heartAnimating = $state(false);
+  let moodPopupOpen = $state(false);
+  let confirmedMoodEmoji = $state<string | null>(null);
+
+  const moodEmojis = EMOJI_DEFS.map(({ emoji, label, color }) => ({ emoji, label, color }));
 
   function toggleFav() {
     if (!currentTrack) return;
@@ -20,6 +28,17 @@
     setTimeout(() => { heartAnimating = false; }, 400);
     libraryStore.toggleFavorite(currentTrack.id);
   }
+
+  function handleMoodSelect(emoji: string) {
+    if (!currentTrack) return;
+    moodStore.addMoodEvent(currentTrack.id, emoji);
+    confirmedMoodEmoji = emoji;
+    moodPopupOpen = false;
+    setTimeout(() => { confirmedMoodEmoji = null; }, 1200);
+  }
+
+  // Close mood popup when expanding the player
+  $effect(() => { if (expanded) moodPopupOpen = false; });
 </script>
 
 {#if currentTrack}
@@ -128,6 +147,31 @@
         aria-label="Open equalizer"
         title="Equalizer"
       >🎛️</button>
+
+      <!-- Repeat indicator -->
+      <button
+        class="compact-icon-btn"
+        onclick={() => playerStore.toggleRepeat()}
+        aria-label={repeat === 'all' ? 'Repeat all' : repeat === 'one' ? 'Repeat one' : 'Repeat off'}
+        title={repeat === 'all' ? 'Repeat all' : repeat === 'one' ? 'Repeat one' : 'Repeat off'}
+        class:active={repeat !== 'off'}
+      >{repeat === 'all' ? '🔁' : repeat === 'one' ? '🔂' : '➡️'}</button>
+
+      <!-- Mood tag button + floating popup -->
+      <div class="mood-btn-wrap">
+        <button
+          class="compact-icon-btn"
+          onclick={() => { moodPopupOpen = !moodPopupOpen; }}
+          aria-label="Tag mood"
+          title="Tag mood"
+          class:active={moodPopupOpen}
+        >{confirmedMoodEmoji ?? '🏷️'}</button>
+        {#if moodPopupOpen}
+          <div class="mood-popup">
+            <EmojiGrid emojis={moodEmojis} onSelect={handleMoodSelect} selectedEmoji={confirmedMoodEmoji} />
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
 {/if}
@@ -333,6 +377,42 @@
   }
 
   .compact-eq-btn:hover { color: var(--accent); }
+
+  /* Shared style for repeat + mood buttons */
+  .compact-icon-btn {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0.25rem 0.35rem;
+    color: var(--text-secondary);
+    line-height: 1;
+    transition: color 0.15s;
+    flex-shrink: 0;
+  }
+
+  .compact-icon-btn:hover { color: var(--accent); }
+  .compact-icon-btn.active { color: var(--accent); }
+
+  /* Mood popup */
+  .mood-btn-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .mood-popup {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    z-index: 51;
+    background: var(--mini-surface);
+    border: 1px solid var(--mini-border);
+    border-radius: 12px;
+    padding: 0.5rem;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.45);
+    width: max-content;
+    max-width: min(380px, calc(100vw - 1.5rem));
+  }
 
   @keyframes heartPop {
     0%   { transform: scale(1); }

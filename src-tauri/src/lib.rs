@@ -80,6 +80,7 @@ fn parse_metadata(path: &Path) -> TrackInfo {
             track_number = tag.get_string(&ItemKey::TrackNumber)
                 .and_then(|s| s.parse::<u32>().ok());
 
+            let pic_count = tag.pictures().len();
             if let Some(pic) = tag.pictures().first() {
                 let mime = match pic.mime_type() {
                     Some(lofty::picture::MimeType::Jpeg) => "image/jpeg",
@@ -89,9 +90,17 @@ fn parse_metadata(path: &Path) -> TrackInfo {
                     Some(lofty::picture::MimeType::Bmp) => "image/bmp",
                     _ => "image/jpeg",
                 };
-                cover_art = Some(format!("data:{};base64,{}", mime, BASE64_STANDARD.encode(pic.data())));
+                let encoded = BASE64_STANDARD.encode(pic.data());
+                println!("[COVER-ART] FOUND file={} pic_count={} mime={} b64_len={}", filename, pic_count, mime, encoded.len());
+                cover_art = Some(format!("data:{};base64,{}", mime, encoded));
+            } else {
+                println!("[COVER-ART] MISSING file={} primary_tag_pic_count={}", filename, pic_count);
             }
         }
+    }
+    if cover_art.is_none() {
+        // File had no primary_tag or primary_tag had no pictures
+        println!("[COVER-ART] NO-ART file={}", filename);
     }
 
     // Fallback: parse "Artist - Title" from filename if no metadata

@@ -78,7 +78,7 @@
     onclick={() => playerStore.togglePlay()}
     aria-label={isPlaying ? 'Pause' : 'Play'}
   >{isPlaying ? '⏸' : '▶'}</button>
-  <button class="ctrl-btn" onclick={() => playerStore.next()} aria-label="Next">⏭</button>
+  <button class="ctrl-btn" onclick={() => playerStore.next(true)} aria-label="Next">⏭</button>
   {#if !mini}
     <div class="volume-group">
       <span class="volume-icon" aria-hidden="true">🔊</span>

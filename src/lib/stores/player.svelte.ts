@@ -59,7 +59,7 @@ export const playerStore = {
     }
   },
 
-  next() {
+  next(isSkip = false) {
     if (!currentTrack || queue.length === 0) return;
     const currentIndex = queue.findIndex((t) => t.id === currentTrack?.id);
 
@@ -67,6 +67,14 @@ export const playerStore = {
       position = 0;
       invoke('play_track', { path: currentTrack.uri }).catch(console.error);
       return;
+    }
+
+    // Log skip event when user manually advances mid-track
+    if (isSkip && position > 0) {
+      const skippedId = currentTrack.id;
+      import('$lib/stores/mood.svelte').then(({ moodStore }) => {
+        moodStore.addMoodEvent(skippedId, '⏭️', 3, undefined, 'skip_prompt').catch(() => {});
+      });
     }
 
     let nextIndex: number;
@@ -93,6 +101,13 @@ export const playerStore = {
 
   previous() {
     if (!currentTrack || queue.length === 0) return;
+    // Log skip event when user goes back mid-track
+    if (position > 0) {
+      const skippedId = currentTrack.id;
+      import('$lib/stores/mood.svelte').then(({ moodStore }) => {
+        moodStore.addMoodEvent(skippedId, '⏭️', 3, undefined, 'skip_prompt').catch(() => {});
+      });
+    }
     const currentIndex = queue.findIndex((t) => t.id === currentTrack?.id);
     const prevIndex = currentIndex - 1 < 0 ? queue.length - 1 : currentIndex - 1;
     currentTrack = queue[prevIndex];

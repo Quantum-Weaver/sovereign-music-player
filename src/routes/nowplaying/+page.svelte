@@ -52,6 +52,9 @@
       <button class="queue-link" onclick={() => goto('/queue')}>Queue</button>
     </div>
 
+    <!-- DIAGNOSTIC: remove before ship -->
+    <pre style="font-size:9px;color:lime;background:#000;padding:4px;word-break:break-all;white-space:pre-wrap;max-height:60px;overflow:hidden">coverArt type={typeof currentTrack.coverArt} | value={currentTrack.coverArt ? currentTrack.coverArt.substring(0, 80) + '…' : 'MISSING'}</pre>
+
     <div class="art-container">
       <div class="glow-wrap">
         <GradientPulse color={colors.accent} pulse={isPlaying}>

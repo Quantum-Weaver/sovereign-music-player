@@ -18,20 +18,20 @@
 </script>
 
 <div class="palette-wrapper">
-  <button
-    class="toggle-btn"
-    onclick={() => expanded = !expanded}
-    aria-label={expanded ? 'Hide mood palette' : 'Show mood palette'}
-  >
-    <span class="toggle-icon">{expanded ? '▼' : '🏷️'}</span>
-    <span class="toggle-label">{expanded ? 'Hide' : 'Mood'}</span>
-  </button>
-
   {#if expanded}
     <div class="emoji-strip">
       <EmojiGrid {emojis} onSelect={handleSelect} selectedEmoji={confirmedEmoji} />
     </div>
   {/if}
+
+  <button
+    class="toggle-btn"
+    onclick={() => expanded = !expanded}
+    aria-label={expanded ? 'Hide mood palette' : 'Show mood palette'}
+  >
+    <span class="toggle-icon">{expanded ? '▲' : '🏷️'}</span>
+    <span class="toggle-label">{expanded ? 'Hide' : 'Mood'}</span>
+  </button>
 </div>
 
 <style>

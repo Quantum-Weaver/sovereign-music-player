@@ -181,15 +181,14 @@ impl<S: Source<Item = f32>> Iterator for EqFilter<S> {
         self.tick += 1;
         if self.tick >= UPDATE_INTERVAL {
             self.tick = 0;
-            let maybe_snap: Option<EqState> = {
-                if let Ok(state) = self.eq_arc.try_lock() {
-                    let changed = state.enabled  != self.enabled
-                        || state.bands   != self.last_bands
-                        || (state.preamp - self.last_preamp).abs() > 0.001;
-                    if changed { Some(state.clone()) } else { None }
-                } else {
-                    None
-                }
+            let (enabled, last_bands, last_preamp) = (self.enabled, self.last_bands, self.last_preamp);
+            let maybe_snap: Option<EqState> = if let Ok(state) = self.eq_arc.try_lock() {
+                let changed = state.enabled != enabled
+                    || state.bands != last_bands
+                    || (state.preamp - last_preamp).abs() > 0.001;
+                if changed { Some(state.clone()) } else { None }
+            } else {
+                None
             };
             if let Some(snap) = maybe_snap {
                 self.apply_state_update(&snap);

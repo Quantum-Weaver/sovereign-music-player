@@ -93,7 +93,7 @@
 
   {#if tracks.length === 0 && !isScanning}
     <div class="placeholder">
-      <span class="text-6xl drop-shadow-[0_0_12px_var(--accent)]">🎵</span>
+      <span class="text-6xl fire-text drop-shadow-[0_0_12px_var(--accent)]">🎵</span>
       <p>Your music library will appear here</p>
     </div>
   {:else}
@@ -107,7 +107,7 @@
     <div class="tabs">
       {#each ['artists', 'albums', 'genres'] as mode}
         <button
-          class="tab"
+          class="tab quantum-weaver-text"
           class:active={viewMode === mode}
           onclick={() => viewMode = mode as 'artists' | 'albums' | 'genres'}
         >

@@ -93,6 +93,13 @@ export const libraryStore = {
       coverArt: row.cover_art || undefined,
       dateAdded: row.date_added || 0,
     }));
+    // DIAGNOSTIC: log cover art presence in DB
+    const artDiag = await db.select('SELECT filename, LENGTH(cover_art) AS art_size FROM songs LIMIT 10') as any[];
+    console.log('[COVER-ART] DB art_size diagnostic:', artDiag);
+    if (savedTracks.length > 0) {
+      const sample = savedTracks[0];
+      console.log(`[COVER-ART] initDatabase first track "${sample.filename}": coverArt=${sample.coverArt ? sample.coverArt.substring(0, 100) : 'NONE/NULL'}`);
+    }
     if (savedTracks.length > 0) {
       this.setTracks(savedTracks);
     }
@@ -227,6 +234,14 @@ export const libraryStore = {
     try {
       const result = await invoke<unknown[]>('scan_directory', { dirPath: selected as string });
       const scannedTracks = result as Track[];
+      // DIAGNOSTIC: log what came back from Rust
+      console.log(`[COVER-ART] scan_directory returned ${scannedTracks.length} tracks`);
+      if (scannedTracks.length > 0) {
+        const sample = scannedTracks[0];
+        console.log(`[COVER-ART] startScan first track "${sample.filename}": coverArt=${sample.coverArt ? sample.coverArt.substring(0, 100) : 'NONE/NULL'}`);
+        const withArt = scannedTracks.filter(t => t.coverArt).length;
+        console.log(`[COVER-ART] tracks with art: ${withArt}/${scannedTracks.length}`);
+      }
       await this.saveScannedTracks(scannedTracks);
       this.setTracks(scannedTracks);
     } catch (err) {
