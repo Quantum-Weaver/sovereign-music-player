@@ -4,6 +4,7 @@
   import { playerStore } from '$lib/stores/player.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
+  import TrackItem from '$lib/components/TrackItem.svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
 
@@ -16,13 +17,7 @@
       .map(id => libraryStore.getTrackById(id))
       .filter(t => t !== undefined)
   );
-
-  function formatDuration(seconds: number): string {
-    if (!seconds || seconds <= 0) return '--:--';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
+  const currentTrack = $derived(playerStore.currentTrack);
 
   function playAll() {
     if (tracks.length > 0) {
@@ -41,7 +36,17 @@
   }
 </script>
 
-<div class="playlist-detail" style="--accent: {colors.accent};">
+<div
+  class="playlist-detail"
+  style="
+    --accent: {colors.accent};
+    --text: {colors.text};
+    --text-secondary: {colors.textSecondary};
+    --text-muted: {colors.textMuted};
+    --border-color: {colors.border};
+    --bg-surface: {colors.surface};
+  "
+>
   {#if !playlist}
     <button class="back-btn" onclick={goBack}>← Playlists</button>
     <div class="empty-state">
@@ -68,17 +73,14 @@
     {:else}
       <div class="track-list">
         {#each tracks as track, i (track.id)}
-          <div class="track-item">
-            <button class="track-click" onclick={() => playTrack(i)}>
-              <span class="track-num">{i + 1}</span>
-              <div class="track-info">
-                <span class="track-title">{track.title}</span>
-                <span class="track-artist">{track.artist}</span>
-              </div>
-              <span class="track-dur">{formatDuration(track.duration)}</span>
-            </button>
-            <button class="remove-btn" onclick={() => playlistStore.removeTrack(playlistId, track.id)}>✕</button>
-          </div>
+          <TrackItem
+            {track}
+            index={i + 1}
+            showHeart={true}
+            isCurrentTrack={currentTrack?.id === track.id}
+            onPlay={() => playTrack(i)}
+            onRemove={() => playlistStore.removeTrack(playlistId, track.id)}
+          />
         {/each}
       </div>
     {/if}
@@ -115,11 +117,7 @@
     margin-bottom: 2rem;
   }
 
-  h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text);
-  }
+  h1 { font-size: 1.5rem; font-weight: 700; color: var(--text); }
 
   .text-secondary { color: var(--text-secondary); }
 
@@ -147,72 +145,4 @@
   }
 
   .track-list { flex: 1; overflow-y: auto; }
-
-  .track-item {
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .track-click {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex: 1;
-    padding: 0.7rem 0;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    text-align: left;
-    color: inherit;
-    font: inherit;
-  }
-
-  .track-click:hover { background-color: rgba(108, 92, 231, 0.08); }
-
-  .track-num {
-    width: 1.5rem;
-    text-align: center;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-  }
-
-  .track-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-    overflow: auto;
-  }
-
-  .track-title {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: auto;
-    text-overflow: ellipsis;
-  }
-
-  .track-artist {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    overflow: auto;
-    text-overflow: ellipsis;
-  }
-
-  .track-dur {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-  }
-
-  .remove-btn {
-    background: none;
-    border: none;
-    color: var(--error);
-    cursor: pointer;
-    font-size: 1rem;
-    padding: 0.5rem;
-  }
 </style>

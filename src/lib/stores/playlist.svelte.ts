@@ -18,11 +18,13 @@ export const playlistStore = {
   },
 
   deletePlaylist(id: string) {
+    if (id === 'favorites') return;
     playlists = playlists.filter((p) => p.id !== id);
     save();
   },
 
   renamePlaylist(id: string, name: string) {
+    if (id === 'favorites') return;
     playlists = playlists.map((p) => p.id === id ? { ...p, name, updatedAt: Date.now() } : p);
     save();
   },
@@ -55,6 +57,13 @@ export const playlistStore = {
         const stored = localStorage.getItem('playlists');
         if (stored) playlists = JSON.parse(stored);
       } catch {}
+      if (!playlists.find((p) => p.id === 'favorites')) {
+        playlists = [
+          { id: 'favorites', name: '❤️ Favorites', trackIds: [], createdAt: Date.now(), updatedAt: Date.now() },
+          ...playlists,
+        ];
+        save();
+      }
     }
   },
 };

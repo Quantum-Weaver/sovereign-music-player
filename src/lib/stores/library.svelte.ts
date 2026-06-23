@@ -8,6 +8,7 @@ let isScanning = $state(false);
 let scanProgress = $state(0);
 let lastScanned = $state<number | null>(null);
 let db = $state<Database | null>(null);
+let favoriteTrackIds = $state<Set<string>>(new Set());
 
 // SQLite bound-parameter limits: 999 max. 13 cols × 50 rows = 650 params per batch.
 const INSERT_BATCH = 50;
@@ -32,6 +33,48 @@ export const libraryStore = {
   get scanProgress() { return scanProgress; },
   get lastScanned() { return lastScanned; },
 
+  get favoriteTrackIds() { return favoriteTrackIds; },
+
+  isFavorite(trackId: string): boolean {
+    return favoriteTrackIds.has(trackId);
+  },
+
+  async loadFavorites() {
+    if (!db) return;
+    const rows = await db.select('SELECT track_id FROM favorites');
+    favoriteTrackIds = new Set((rows as any[]).map((r: any) => r.track_id));
+    // Sync DB favorites to the localStorage-backed favorites playlist
+    const { playlistStore } = await import('$lib/stores/playlist.svelte');
+    const favPlaylist = playlistStore.getPlaylist('favorites');
+    if (favPlaylist) {
+      const dbIds = new Set(favoriteTrackIds);
+      const plIds = new Set(favPlaylist.trackIds);
+      for (const id of dbIds) { if (!plIds.has(id)) playlistStore.addTrack('favorites', id); }
+      for (const id of plIds) { if (!dbIds.has(id)) playlistStore.removeTrack('favorites', id); }
+    }
+  },
+
+  async toggleFavorite(trackId: string) {
+    if (!db) return;
+    const { moodStore } = await import('$lib/stores/mood.svelte');
+    const { playlistStore } = await import('$lib/stores/playlist.svelte');
+    if (favoriteTrackIds.has(trackId)) {
+      await db.execute('DELETE FROM favorites WHERE track_id = $1', [trackId]);
+      const next = new Set(favoriteTrackIds);
+      next.delete(trackId);
+      favoriteTrackIds = next;
+      playlistStore.removeTrack('favorites', trackId);
+    } else {
+      const ts = Math.floor(Date.now() / 1000);
+      await db.execute('INSERT OR REPLACE INTO favorites (track_id, timestamp) VALUES ($1, $2)', [trackId, ts]);
+      const next = new Set(favoriteTrackIds);
+      next.add(trackId);
+      favoriteTrackIds = next;
+      await moodStore.addMoodEvent(trackId, '❤️', 5, undefined, 'favorite');
+      playlistStore.addTrack('favorites', trackId);
+    }
+  },
+
   // Initialize database and load saved library
   async initDatabase() {
     db = await Database.load('sqlite:songs.db');
@@ -53,6 +96,7 @@ export const libraryStore = {
     if (savedTracks.length > 0) {
       this.setTracks(savedTracks);
     }
+    await this.loadFavorites();
   },
 
   // Save scanned tracks to database with incremental logic
@@ -162,6 +206,36 @@ export const libraryStore = {
     albums = [];
     artists = [];
     lastScanned = null;
+  },
+
+  async startScan() {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    const { invoke } = await import('@tauri-apps/api/core');
+    const { listen } = await import('@tauri-apps/api/event');
+
+    const selected = await open({ directory: true, multiple: false, title: 'Select your music folder' });
+    if (!selected) return;
+
+    isScanning = true;
+    scanProgress = 0;
+
+    const unlisten = await listen<{ current: number; total: number }>('scan-progress', (event) => {
+      const { current, total } = event.payload;
+      if (total > 0) scanProgress = current / total;
+    });
+
+    try {
+      const result = await invoke<unknown[]>('scan_directory', { dirPath: selected as string });
+      const scannedTracks = result as Track[];
+      await this.saveScannedTracks(scannedTracks);
+      this.setTracks(scannedTracks);
+    } catch (err) {
+      console.error('Scan failed:', err);
+    } finally {
+      unlisten();
+      isScanning = false;
+      scanProgress = 0;
+    }
   },
 
   setScanning(scanning: boolean) { isScanning = scanning; },

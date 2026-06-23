@@ -2,24 +2,28 @@
   import { playerStore } from '$lib/stores/player.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
+  import TrackItem from '$lib/components/TrackItem.svelte';
 
   const colors = $derived(getThemeColors(themeStore.config));
   const queue = $derived(playerStore.queue);
   const currentTrack = $derived(playerStore.currentTrack);
-
-  function formatDuration(seconds: number): string {
-    if (!seconds || seconds <= 0) return '--:--';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
 
   function goBack() {
     window.history.back();
   }
 </script>
 
-<div class="queue-page" style="--accent: {colors.accent};">
+<div
+  class="queue-page"
+  style="
+    --accent: {colors.accent};
+    --text: {colors.text};
+    --text-secondary: {colors.textSecondary};
+    --text-muted: {colors.textMuted};
+    --border-color: {colors.border};
+    --bg-surface: {colors.surface};
+  "
+>
   <div class="header">
     <button class="back-btn" onclick={goBack}>← Now Playing</button>
     {#if queue.length > 0}
@@ -38,21 +42,14 @@
   {:else}
     <div class="track-list">
       {#each queue as track, i (track.id + '_' + i)}
-        <div class="track-item">
-          <button class="track-click" onclick={() => playerStore.loadTrack(track)}>
-            <span class="track-num" class:active={currentTrack?.id === track.id}>
-              {currentTrack?.id === track.id ? '▶' : i + 1}
-            </span>
-            <div class="track-info">
-              <span class="track-title" class:active={currentTrack?.id === track.id}>
-                {track.title}
-              </span>
-              <span class="track-artist">{track.artist}</span>
-            </div>
-            <span class="track-dur">{formatDuration(track.duration)}</span>
-          </button>
-          <button class="remove-btn" onclick={() => playerStore.removeFromQueue(i)}>✕</button>
-        </div>
+        <TrackItem
+          {track}
+          index={i + 1}
+          showHeart={true}
+          isCurrentTrack={currentTrack?.id === track.id}
+          onPlay={() => playerStore.loadTrack(track)}
+          onRemove={() => playerStore.removeFromQueue(i)}
+        />
       {/each}
     </div>
   {/if}
@@ -102,80 +99,7 @@
   }
 
   .text-secondary { color: var(--text-secondary); }
-  .text-muted { color: var(--text-muted); }
+  .text-muted     { color: var(--text-muted); }
 
   .track-list { flex: 1; overflow-y: auto; }
-
-  .track-item {
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.15s;
-  }
-
-  .track-item:hover { background-color: rgba(108, 92, 231, 0.08); }
-
-  .track-click {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex: 1;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    text-align: left;
-    padding: 0.7rem 0.5rem;
-    color: inherit;
-    font: inherit;
-  }
-
-  .track-num {
-    width: 1.5rem;
-    text-align: center;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-  }
-
-  .track-num.active { color: var(--accent); }
-
-  .track-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-    overflow: auto;
-  }
-
-  .track-title {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: auto;
-    text-overflow: ellipsis;
-  }
-
-  .track-title.active { color: var(--accent); }
-
-  .track-artist {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    overflow: auto;
-    text-overflow: ellipsis;
-  }
-
-  .track-dur {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-  }
-
-  .remove-btn {
-    background: none;
-    border: none;
-    color: var(--error);
-    cursor: pointer;
-    font-size: 1rem;
-    padding: 0.5rem;
-  }
 </style>

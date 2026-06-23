@@ -5,7 +5,13 @@
   import { goto } from '$app/navigation';
 
   const colors = $derived(getThemeColors(themeStore.config));
-  const playlists = $derived(playlistStore.playlists);
+  const sortedPlaylists = $derived(
+    [...playlistStore.playlists].sort((a, b) => {
+      if (a.id === 'favorites') return -1;
+      if (b.id === 'favorites') return 1;
+      return 0;
+    })
+  );
 
   let showCreate = $state(false);
   let newName = $state('');
@@ -45,32 +51,32 @@
     </div>
   {/if}
 
-  {#if playlists.length === 0 && !showCreate}
-    <div class="empty-state">
-      <span class="text-5xl drop-shadow-[0_0_8px_var(--accent)]">📋</span>
-      <p class="text-secondary">No playlists yet</p>
-    </div>
-  {:else}
-    <div class="playlist-list">
-      {#each playlists as playlist (playlist.id)}
-        <div class="playlist-item">
-          <button class="playlist-click" onclick={() => goto(`/playlists/${playlist.id}`)}>
-            <div class="playlist-icon">
-              <span>🎵</span>
-            </div>
-            <div class="playlist-info">
-              <span class="playlist-name">{playlist.name}</span>
-              <span class="playlist-meta">
-                {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-            <span class="chevron">›</span>
-          </button>
+  <div class="playlist-list">
+    {#each sortedPlaylists as playlist (playlist.id)}
+      <div class="playlist-item">
+        <button class="playlist-click" onclick={() => goto(`/playlists/${playlist.id}`)}>
+          <div class="playlist-icon" class:fav-icon={playlist.id === 'favorites'}>
+            <span>{playlist.id === 'favorites' ? '❤️' : '🎵'}</span>
+          </div>
+          <div class="playlist-info">
+            <span class="playlist-name">{playlist.name}</span>
+            <span class="playlist-meta">
+              {playlist.trackIds.length} track{playlist.trackIds.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <span class="chevron">›</span>
+        </button>
+        {#if playlist.id !== 'favorites'}
           <button class="delete-btn" onclick={() => handleDelete(playlist.id, playlist.name)}>✕</button>
-        </div>
-      {/each}
-    </div>
-  {/if}
+        {/if}
+      </div>
+    {/each}
+    {#if sortedPlaylists.length <= 1 && !showCreate}
+      <div class="empty-hint">
+        <p>No custom playlists yet. Hit <strong>+ New</strong> to create one.</p>
+      </div>
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -136,17 +142,6 @@
     background-color: var(--success);
   }
 
-  .empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-
-  .text-secondary { color: var(--text-secondary); }
-
   .playlist-list { flex: 1; overflow-y: auto; }
 
   .playlist-item {
@@ -183,6 +178,18 @@
     flex-shrink: 0;
     background-color: var(--accent);
   }
+
+  .playlist-icon.fav-icon {
+    background: linear-gradient(135deg, #E17055, #d63031);
+  }
+
+  .empty-hint {
+    padding: 1.5rem 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  .empty-hint strong { color: var(--text-secondary); }
 
   .playlist-info {
     flex: 1;

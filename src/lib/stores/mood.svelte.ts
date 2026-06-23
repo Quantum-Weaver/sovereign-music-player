@@ -12,6 +12,17 @@ let db = $state<Database | null>(null);
 async function initDB() {
   if (!browser) return;
   db = await Database.load('sqlite:songs.db');
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS mood_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      track_id TEXT NOT NULL,
+      emoji TEXT NOT NULL,
+      timestamp INTEGER NOT NULL,
+      intensity INTEGER DEFAULT 3,
+      comment TEXT,
+      context TEXT DEFAULT 'manual'
+    )
+  `);
   await refreshStats();
 }
 
@@ -21,7 +32,7 @@ async function addMoodEvent(
   emoji: string,
   intensity: number = 3,
   comment?: string,
-  context: 'manual' | 'skip_prompt' | 'track_end' = 'manual'
+  context: 'manual' | 'skip_prompt' | 'track_end' | 'favorite' = 'manual'
 ) {
   if (!db) return;
   const timestamp = Date.now();

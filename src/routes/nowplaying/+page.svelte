@@ -1,16 +1,29 @@
 <script lang="ts">
   import { playerStore } from '$lib/stores/player.svelte';
+  import { libraryStore } from '$lib/stores/library.svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
   import PlayerControls from '$lib/components/PlayerControls.svelte';
+  import GradientPulse from '$lib/components/GradientPulse.svelte';
   import { goto } from '$app/navigation';
   import EmojiPalette from '$lib/components/EmojiPalette.svelte';
 
   const colors = $derived(getThemeColors(themeStore.config));
   const currentTrack = $derived(playerStore.currentTrack);
+  const isPlaying = $derived(playerStore.isPlaying);
   const shuffle = $derived(playerStore.shuffle);
   const repeat = $derived(playerStore.repeat);
   const repeatIcon = $derived(repeat === 'one' ? '🔂' : repeat === 'all' ? '🔁' : '➡️');
+  const isFav = $derived(currentTrack ? libraryStore.isFavorite(currentTrack.id) : false);
+
+  let heartAnimating = $state(false);
+
+  function toggleFav() {
+    if (!currentTrack) return;
+    heartAnimating = true;
+    setTimeout(() => { heartAnimating = false; }, 400);
+    libraryStore.toggleFavorite(currentTrack.id);
+  }
 
   function goBack() {
     window.history.back();
@@ -40,23 +53,37 @@
     </div>
 
     <div class="art-container">
-      <div class="album-art">
-        {#if currentTrack.coverArt}
-          <img src={currentTrack.coverArt} alt="Album art" class="art-img" />
-        {:else}
-          <span>💿</span>
-        {/if}
+      <div class="glow-wrap">
+        <GradientPulse color={colors.accent} pulse={isPlaying}>
+          <div class="album-art">
+            {#if currentTrack.coverArt}
+              <img src={currentTrack.coverArt} alt="Album art" class="art-img" />
+            {:else}
+              <span>💿</span>
+            {/if}
+          </div>
+        </GradientPulse>
       </div>
     </div>
-    
+
     <div class="track-info">
-      <h2>{currentTrack.title}</h2>
+      <div class="title-row">
+        <h2>{currentTrack.title}</h2>
+        <button
+          class="heart-btn"
+          class:fav={isFav}
+          class:pop={heartAnimating}
+          onclick={toggleFav}
+          aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+          aria-pressed={isFav}
+        >{isFav ? '❤️' : '🤍'}</button>
+      </div>
       <p class="artist">{currentTrack.artist}</p>
       <p class="album">{currentTrack.album}</p>
     </div>
 
-    <PlayerControls />      
-    
+    <PlayerControls />
+
     <div class="extra-controls">
       <button
         class="ctrl-btn"
@@ -119,6 +146,12 @@
     margin-bottom: 2rem;
   }
 
+  .glow-wrap {
+    position: relative;
+    width: 260px;
+    height: 260px;
+  }
+
   .album-art {
     width: 260px;
     height: 260px;
@@ -129,26 +162,52 @@
     font-size: 4rem;
     color: white;
     background-color: var(--accent);
-    box-shadow: 0 0 60px color-mix(in srgb, var(--accent) 20%, transparent);
     overflow: hidden;
+    position: relative;
+    z-index: 1;
   }
 
-  .art-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  .art-img { width: 100%; height: 100%; object-fit: cover; }
 
   .track-info {
     text-align: center;
     margin-bottom: 1.5rem;
   }
 
+  .title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
   h2 {
     font-size: 1.35rem;
     font-weight: 700;
-    margin-bottom: 0.25rem;
     color: var(--text);
+    margin: 0;
+  }
+
+  .heart-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.15rem;
+    font-size: 1.3rem;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+  }
+
+  .heart-btn:hover { transform: scale(1.25); }
+  .heart-btn.pop { animation: heartPop 0.35s ease-out; }
+
+  @keyframes heartPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.6); }
+    70%  { transform: scale(0.9); }
+    100% { transform: scale(1); }
   }
 
   .artist {
@@ -179,11 +238,6 @@
     transition: transform 0.15s, color 0.15s;
   }
 
-  .ctrl-btn:hover {
-    transform: scale(1.1);
-  }
-
-  .ctrl-btn.active {
-    color: var(--accent);
-  }
+  .ctrl-btn:hover { transform: scale(1.1); }
+  .ctrl-btn.active { color: var(--accent); }
 </style>

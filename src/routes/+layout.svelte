@@ -11,7 +11,7 @@
   import { moodStore } from '$lib/stores/mood.svelte';
   
   let { children }: { children: Snippet } = $props();
-  let currentRoute = $state('library');
+  let currentRoute = $state('home');
 
   import { libraryStore } from '$lib/stores/library.svelte';
 
@@ -24,20 +24,31 @@
 
   $effect(() => {
     const path = page.url.pathname;
-    if (path.includes('playlist')) currentRoute = 'playlists';
-    else if (path.includes('timer')) currentRoute = 'timer';
-    else if (path.includes('settings')) currentRoute = 'settings';
-    else currentRoute = 'library';
+    if (path === '/') currentRoute = 'home';
+    else if (path.startsWith('/library')) currentRoute = 'library';
+    else if (path.startsWith('/playlists')) currentRoute = 'playlists';
+    else if (path === '/search') currentRoute = 'search';
+    else if (path === '/resonance') currentRoute = 'resonance';
+    else if (path === '/visualizer') currentRoute = 'visualizer';
+    else if (path === '/equalizer') currentRoute = 'equalizer';
+    else if (path.startsWith('/timer')) currentRoute = 'timer';
+    else if (path.startsWith('/settings')) currentRoute = 'settings';
+    else currentRoute = 'home';
   });
 
   const config = $derived(themeStore.config);
   const colors = $derived(getThemeColors(config));
 
   const navItems = [
-    { id: 'library', label: 'Library', icon: '📚', href: '/' },
-    { id: 'playlists', label: 'Playlists', icon: '📋', href: '/playlists' },
-    { id: 'timer', label: 'Timer', icon: '⏰', href: '/timer' },
-    { id: 'settings', label: 'Settings', icon: '⚙️', href: '/settings' },
+    { id: 'home',       label: 'Home',       icon: '🎵', href: '/' },
+    { id: 'library',    label: 'Library',    icon: '📚', href: '/library' },
+    { id: 'playlists',  label: 'Playlists',  icon: '📋', href: '/playlists' },
+    { id: 'search',     label: 'Search',     icon: '🔍', href: '/search' },
+    { id: 'resonance',  label: 'Resonance',  icon: '🧠', href: '/resonance' },
+    { id: 'visualizer', label: 'Visualizer', icon: '🌊', href: '/visualizer' },
+    { id: 'equalizer',  label: 'Equalizer',  icon: '🎛️', href: '/equalizer' },
+    { id: 'timer',      label: 'Timer',      icon: '⏰', href: '/timer' },
+    { id: 'settings',   label: 'Settings',   icon: '⚙️', href: '/settings' },
   ];
 
   function handleNav(href: string) {

@@ -2,10 +2,18 @@
   import { themeStore } from '$lib/stores/theme.svelte';
   import { libraryStore } from '$lib/stores/library.svelte';
   import { getThemeColors, PRESET_THEMES } from '$lib/theme/theme';
+  import { goto } from '$app/navigation';
 
   async function clearLibrary() {
     if (confirm('Delete all tracks from your library? Rescan your folders to rebuild it.')) {
       await libraryStore.clearLibrary();
+    }
+  }
+
+  async function fullRescan() {
+    if (confirm('Clear your library and immediately rescan a folder? A folder picker will open.')) {
+      await libraryStore.clearLibrary();
+      await libraryStore.startScan();
     }
   }
 
@@ -108,10 +116,17 @@
       {/each}
     </div>
 
+    <!-- Audio -->
+    <h3>AUDIO</h3>
+    <button class="nav-btn" onclick={() => goto('/equalizer')}>🎛️ Equalizer →</button>
+
     <!-- Library Data -->
     <h3>LIBRARY DATA</h3>
-    <button class="danger-btn" onclick={clearLibrary}>Clear Library</button>
-    <p class="danger-desc">Removes all tracks from the database. Rescan your folders to rebuild.</p>
+    <div class="action-row">
+      <button class="danger-btn" onclick={clearLibrary}>Clear Library</button>
+      <button class="danger-btn" onclick={fullRescan}>Full Rescan (Clear &amp; Rescan)</button>
+    </div>
+    <p class="danger-desc">Clear Library removes all tracks. Full Rescan clears first, then opens a folder picker to rebuild.</p>
 
     <!-- App Info -->
     <p class="app-info">
@@ -228,6 +243,27 @@
     background-color: var(--accent);
     color: #fff;
     border-color: var(--accent);
+  }
+
+  .nav-btn {
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    text-align: left;
+  }
+
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .action-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
   .danger-btn {

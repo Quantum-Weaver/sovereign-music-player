@@ -1,5 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod audio;
+mod equalizer;
+mod visualizer;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -213,13 +215,28 @@ pub fn run() {
             CREATE INDEX IF NOT EXISTS idx_mood_track ON mood_events(track_id);
             CREATE INDEX IF NOT EXISTS idx_mood_time ON mood_events(timestamp);",
             kind: MigrationKind::Up,
-        }
+        },
+        Migration {
+            version: 3,
+            description: "create_favorites_table",
+            sql: "CREATE TABLE IF NOT EXISTS favorites (
+                track_id TEXT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                PRIMARY KEY (track_id)
+            );",
+            kind: MigrationKind::Up,
+        },
     ];
 
-    let audio_state = audio::init();
+    let (vis_tx, vis_rx) = visualizer::make_channel();
+    let audio_state = audio::init(vis_tx);
 
     tauri::Builder::default()
         .manage(audio_state)
+        .setup(|app| {
+            visualizer::start(app.handle().clone(), vis_rx);
+            Ok(())
+        })
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:songs.db", songs_migrations)
@@ -237,6 +254,11 @@ pub fn run() {
             audio::seek,
             audio::set_volume,
             audio::stop,
+            audio::get_eq_state,
+            audio::set_eq_band,
+            audio::set_eq_preamp,
+            audio::toggle_eq,
+            audio::set_eq_preset,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

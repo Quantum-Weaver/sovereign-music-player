@@ -51,7 +51,7 @@ export interface MoodEvent {
   timestamp: number;
   intensity: number;
   comment?: string;
-  context: 'manual' | 'skip_prompt' | 'track_end';
+  context: 'manual' | 'skip_prompt' | 'track_end' | 'favorite';
 }
 
 // Emoji definition (folksonomy)
