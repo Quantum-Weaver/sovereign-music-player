@@ -171,6 +171,7 @@ export const libraryStore = {
       const albumName = track.album.trim();
       const artistKey = artistName.toLowerCase();
       const albumKey = `${albumName.toLowerCase()}|||${artistKey}`;
+      const album = albumMap.get(albumKey) || { coverArt: track.coverArt };
 
       if (!albumMap.has(albumKey)) {
         albumMap.set(albumKey, {
@@ -178,7 +179,7 @@ export const libraryStore = {
           name: albumName,
           artist: artistName,
           tracks: [],
-          coverArt: track.coverArt,
+          coverArt: album.coverArt || track.coverArt,
           year: track.year,
           genre: track.genre,
         });
