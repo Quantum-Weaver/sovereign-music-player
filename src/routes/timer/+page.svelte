@@ -2,8 +2,16 @@
   import { themeStore } from '$lib/stores/theme.svelte';
   import { getThemeColors } from '$lib/theme/theme';
   import { playerStore } from '$lib/stores/player.svelte';
+  import TimerVisualization from '$lib/components/TimerVisualization.svelte';
 
   const PRESETS = [15, 30, 45, 60, 90, 120];
+  const MODES: Array<{ id: 'sand' | 'breathing' | 'dissolve' | 'numeric'; label: string; icon: string }> = [
+    { id: 'sand',      label: 'Sand',      icon: '⌛' },
+    { id: 'breathing', label: 'Breathe',   icon: '🫧' },
+    { id: 'dissolve',  label: 'Mandala',   icon: '✨' },
+    { id: 'numeric',   label: 'Numeric',   icon: '🔢' },
+  ];
+
   const colors = $derived(getThemeColors(themeStore.config));
 
   let totalSecs = $state(0);
@@ -13,6 +21,16 @@
   let interval = $state<ReturnType<typeof setInterval> | null>(null);
   let fadeInterval = $state<ReturnType<typeof setInterval> | null>(null);
   let preTimerVolume = 0;
+
+  // Respect prefers-reduced-motion — default to numeric when motion is reduced
+  const prefersReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let mode = $state<'sand' | 'breathing' | 'dissolve' | 'numeric'>(prefersReduced ? 'numeric' : 'sand');
+
+  function cycleMode() {
+    if (prefersReduced) return;
+    const idx = MODES.findIndex(m => m.id === mode);
+    mode = MODES[(idx + 1) % MODES.length].id;
+  }
 
   function startFade() {
     preTimerVolume = playerStore.volume;
@@ -96,12 +114,29 @@
     --warning: {colors.warning};
   "
 >
-  <h2>Sleep Timer</h2>
+  <div class="header-row">
+    <h2>Sleep Timer</h2>
+    {#if !prefersReduced}
+      <button class="mode-btn" onclick={cycleMode} title="Switch visualization">
+        {MODES.find(m => m.id === mode)?.icon}
+        {MODES.find(m => m.id === mode)?.label}
+        <span class="mode-cycle">↻</span>
+      </button>
+    {/if}
+  </div>
 
   {#if isRunning}
     <div class="active-timer">
       <p class="timer-label">Music will stop in</p>
-      <span class="timer-value">{formatCountdown(remainingSecs)}</span>
+
+      <div class="vis-wrap">
+        <TimerVisualization {remainingSecs} {totalSecs} {mode} />
+      </div>
+
+      {#if mode !== 'numeric' && mode !== 'breathing'}
+        <span class="time-overlay">{formatCountdown(remainingSecs)}</span>
+      {/if}
+
       <div class="progress-bar">
         <div
           class="progress-fill"
@@ -142,11 +177,42 @@
     color: var(--text);
   }
 
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+  }
+
   h2 {
     font-size: 1.75rem;
     font-weight: 700;
-    margin-bottom: 2rem;
     color: var(--text);
+    margin: 0;
+  }
+
+  .mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .mode-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .mode-cycle {
+    font-size: 0.9rem;
+    opacity: 0.6;
   }
 
   .label {
@@ -159,25 +225,35 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 3rem;
+    padding-top: 1.5rem;
     gap: 1rem;
   }
 
   .timer-label {
     color: var(--text-secondary);
+    margin: 0;
   }
 
-  .timer-value {
-    font-size: 3rem;
+  .vis-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+  }
+
+  .time-overlay {
+    font-size: 2rem;
     font-weight: 700;
     color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
   }
 
   .progress-bar {
     width: 100%;
+    max-width: 360px;
     height: 4px;
     border-radius: 2px;
-    margin: 1rem 0;
     background-color: var(--bg-surface-light);
   }
 
