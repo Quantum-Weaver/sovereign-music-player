@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "PowerShell($env:ANDROID_HOME; $env:ANDROID_SDK_ROOT; $env:ANDROID_NDK_HOME; $env:NDK_HOME)",
+      "PowerShell(cargo tauri *)",
+      "PowerShell([System.Environment]::SetEnvironmentVariable\\(\"ANDROID_NDK_HOME\", \"C:\\\\Users\\\\audhd\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\ndk\\\\30.0.14904198\", \"User\"\\))",
+      "PowerShell(Remove-Item *)",
+      "PowerShell([System.Environment]::SetEnvironmentVariable\\(\"NDK_HOME\", \"C:\\\\Users\\\\audhd\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\ndk\\\\30.0.14904198\", \"User\"\\))"
     ]
   }
 }
